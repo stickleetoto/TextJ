@@ -1,6 +1,6 @@
 # TextJ Documentation
 
-This directory defines the initial technical direction of TextJ.
+This directory defines the technical direction of TextJ.
 
 ## Core idea
 
@@ -22,23 +22,66 @@ model inference time
 
 ## Documents
 
+### Product and roadmap
+
 | Document | Purpose |
 | --- | --- |
 | [PRODUCT.md](PRODUCT.md) | Product scope, principles, use cases, non-goals |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Runtime architecture and module boundaries |
-| [OCR_ENGINE.md](OCR_ENGINE.md) | OCR backend strategy and optimization layers |
-| [PERFORMANCE.md](PERFORMANCE.md) | Benchmark rules and latency targets |
 | [ROADMAP.md](ROADMAP.md) | Development plan from v0.1 to v1.0 |
 
-## Initial priorities
+### Architecture and implementation
 
-1. Build one reliable OCR pipeline.
-2. Keep models warm in memory.
-3. Benchmark every stage.
-4. Add screen-region capture.
-5. Copy recognized text immediately.
-6. Optimize Korean + English mixed text.
-7. Add optional GPU acceleration only where it actually improves end-to-end latency.
+| Document | Purpose |
+| --- | --- |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Runtime architecture and module boundaries |
+| [TECH_STACK.md](TECH_STACK.md) | Candidate languages, runtimes, APIs, packaging and first implementation stack |
+| [WINDOWS_RUNTIME.md](WINDOWS_RUNTIME.md) | Hotkey, capture, clipboard, DPI, resident process and Windows-specific design |
+| [OCR_ENGINE.md](OCR_ENGINE.md) | OCR backend abstraction and recognition strategy |
+
+### Performance engineering
+
+| Document | Purpose |
+| --- | --- |
+| [PERFORMANCE.md](PERFORMANCE.md) | Performance goals, p50/p95 rules and latency budget |
+| [OPTIMIZATION.md](OPTIMIZATION.md) | Pixel reduction, batching, warm-up, cache, quantization and copy reduction |
+| [BENCHMARK_MATRIX.md](BENCHMARK_MATRIX.md) | Workload matrix, metrics, JSON results and regression gates |
+| [TECH_RADAR.md](TECH_RADAR.md) | Adopt / Trial / Assess / Hold technology decisions |
+
+## Initial technical baseline
+
+Current first candidate stack:
+
+```text
+Windows-first
+  |
+  +-- Python prototype
+  +-- PP-OCRv5 Korean mobile
+  +-- RapidOCR and/or direct ONNX adapter
+  +-- ONNX Runtime CPU baseline
+  +-- NumPy
+  +-- minimal OpenCV
+  +-- native Windows hotkey/capture/clipboard path
+```
+
+The backend is intentionally replaceable.
+
+## Performance doctrine
+
+TextJ measures:
+
+```text
+trigger
++ capture
++ conversion
++ detection
++ crop
++ recognition
++ layout
++ clipboard
+= total latency
+```
+
+Every performance-sensitive change should report both latency and OCR quality.
 
 ## Design rule
 
