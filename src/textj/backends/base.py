@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Mapping
 
+from textj.image_types import OCRInput
 from textj.models import OCRLine
 
 
@@ -20,6 +20,6 @@ class OCRBackend(ABC):
     name: str
 
     @abstractmethod
-    def recognize(self, image_path: Path) -> BackendResult:
-        """Recognize text from an image file."""
+    def recognize(self, image: OCRInput) -> BackendResult:
+        """Recognize text from an in-memory image or image file."""
         raise NotImplementedError

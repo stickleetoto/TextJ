@@ -27,6 +27,18 @@ The code path for local image OCR is present. Real Windows screenshot validation
 - RapidOCR internal detector/classifier/recognizer timing export when available
 - backend-independent model and pipeline tests
 
+### In-memory and clipboard path
+
+- OCRPipeline accepts NumPy image arrays
+- RapidOCR backend accepts in-memory arrays directly
+- Pillow clipboard image acquisition
+- RGB -> contiguous BGR conversion for RapidOCR
+- no temporary image file on clipboard path
+- native Win32 CF_UNICODETEXT output
+- `textj-clipboard` command
+- `--no-copy`, JSON and timing modes
+- array/clipboard conversion tests
+
 ### Benchmark foundation
 
 - `textj-bench` single-image benchmark
@@ -95,13 +107,12 @@ After baseline numbers exist:
 2. fast-path image-size policy
 3. box filtering/merge experiments
 4. recognizer batching experiments
-5. clipboard-image input
+5. optimize the new clipboard path under a resident runtime
 6. Windows screen-region capture
 
 ## Known limitations
 
-- file input only
-- no clipboard input yet
+- clipboard OCR currently starts a fresh process/model each invocation
 - no screen-region capture yet
 - no resident process yet
 - each CLI invocation is a new Python process

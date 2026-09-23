@@ -36,6 +36,7 @@ model inference time
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Runtime architecture and module boundaries |
 | [TECH_STACK.md](TECH_STACK.md) | Candidate languages, runtimes, APIs, packaging and first implementation stack |
 | [WINDOWS_RUNTIME.md](WINDOWS_RUNTIME.md) | Hotkey, capture, clipboard, DPI, resident process and Windows-specific design |
+| [CLIPBOARD.md](CLIPBOARD.md) | Current in-memory clipboard-image OCR implementation and limitations |
 | [OCR_ENGINE.md](OCR_ENGINE.md) | OCR backend abstraction and recognition strategy |
 
 ### Performance engineering

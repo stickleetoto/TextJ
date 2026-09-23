@@ -10,9 +10,9 @@ The project focuses on low latency, local processing, Korean/English text, and a
 
 ## Status
 
-**v0.1 OCR Core — implementation started**
+**v0.1 OCR Core implemented, v0.2 benchmark work in progress, clipboard OCR prototype available.**
 
-The current build accepts an image file, runs local OCR through a replaceable backend, and emits plain text or structured JSON.
+The current build accepts either an image file or an in-memory clipboard image, runs local OCR through a replaceable backend, and can emit plain text, structured JSON, benchmark artifacts, or clipboard text.
 
 ## Current stack
 
@@ -99,6 +99,20 @@ textj-bench-suite benchmarks/manifest.json \
 
 The benchmark output records p50/p95 latency, sampled RSS memory, OCR confidence, CER when ground truth exists, and system/runtime metadata.
 
+Clipboard image OCR on Windows:
+
+```powershell
+textj-clipboard --timing
+```
+
+This reads the image directly from the clipboard into memory, runs OCR without writing a temporary image file, then replaces the clipboard with the recognized text.
+
+Inspect without replacing the clipboard:
+
+```powershell
+textj-clipboard --no-copy
+```
+
 English recognition model:
 
 ```bash
@@ -139,6 +153,7 @@ global hotkey
 - [OCR engine strategy](docs/OCR_ENGINE.md)
 - [Optimization strategy](docs/OPTIMIZATION.md)
 - [Windows runtime](docs/WINDOWS_RUNTIME.md)
+- [Clipboard OCR](docs/CLIPBOARD.md)
 - [Performance targets](docs/PERFORMANCE.md)
 - [Benchmark matrix](docs/BENCHMARK_MATRIX.md)
 - [Technology radar](docs/TECH_RADAR.md)

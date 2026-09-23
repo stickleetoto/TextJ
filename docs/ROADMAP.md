@@ -100,6 +100,8 @@ Goal: reduce work before recognition.
 
 # v0.4 — Clipboard Image OCR
 
+**Status: early prototype implemented ahead of schedule — in-memory image input and Win32 text copy work are present; resident-runtime integration remains.**
+
 Goal: remove file-save friction.
 
 ### Deliverables

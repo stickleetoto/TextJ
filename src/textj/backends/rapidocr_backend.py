@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from textj.backends.base import BackendResult, OCRBackend
+from textj.image_types import OCRInput
 from textj.models import Box, OCRLine
 
 
@@ -41,8 +41,6 @@ class RapidOCRBackend(OCRBackend):
         self.language = language
         self.text_score = text_score
 
-        # PP-OCRv5 Korean mobile recognition officially supports Korean text and
-        # is paired with the multilingual/ch detector. Models are managed by RapidOCR.
         params = {
             "Global.text_score": text_score,
             "Det.engine_type": EngineType.ONNXRUNTIME,
@@ -56,10 +54,11 @@ class RapidOCRBackend(OCRBackend):
         }
         self._engine = RapidOCR(params=params)
 
-    def recognize(self, image_path: Path) -> BackendResult:
-        # Screen text is normally upright. Skipping classification saves work on
-        # the fast path; orientation handling belongs to the later accurate path.
-        result = self._engine(str(image_path), use_cls=False)
+    def recognize(self, image: OCRInput) -> BackendResult:
+        # ndarray inputs are expected to already use OpenCV/BGR channel order.
+        # Screen text is normally upright, so classification stays disabled on
+        # the fast path.
+        result = self._engine(image, use_cls=False)
 
         raw_txts = getattr(result, "txts", None)
         raw_scores = getattr(result, "scores", None)
