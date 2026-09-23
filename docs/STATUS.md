@@ -57,6 +57,21 @@ The code path for local image OCR is present. Real Windows screenshot validation
 - benchmark utility tests
 - `benchmarks/` fixture layout documentation
 
+### Development handoff
+
+The repository now includes a self-contained autonomous development handoff:
+
+- root `CLAUDE.md`
+- `docs/HANDOFF_CLAUDE.md`
+- `docs/EXECUTION_PLAN.md`
+- `docs/DEFINITION_OF_DONE.md`
+- `docs/DEV_WORKLOG.md`
+- `docs/CLAUDE_KICKOFF_PROMPT.md`
+- `CONTRIBUTING.md`
+- pull request validation template
+
+These documents define product constraints, validation rules, autonomous task order, benchmark expectations, and cross-session logging.
+
 ## Commands
 
 OCR:

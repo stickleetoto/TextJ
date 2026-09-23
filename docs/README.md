@@ -48,6 +48,16 @@ model inference time
 | [BENCHMARK_MATRIX.md](BENCHMARK_MATRIX.md) | Workload matrix, metrics, JSON results and regression gates |
 | [TECH_RADAR.md](TECH_RADAR.md) | Adopt / Trial / Assess / Hold technology decisions |
 
+### Agent handoff
+
+| Document | Purpose |
+| --- | --- |
+| [HANDOFF_CLAUDE.md](HANDOFF_CLAUDE.md) | Current implementation state, risks and first validation steps |
+| [EXECUTION_PLAN.md](EXECUTION_PLAN.md) | Autonomous development queue from stabilization through packaging |
+| [DEFINITION_OF_DONE.md](DEFINITION_OF_DONE.md) | Completion checklist for code, tests, performance and Windows work |
+| [DEV_WORKLOG.md](DEV_WORKLOG.md) | Short chronological record for cross-session continuation |
+| [CLAUDE_KICKOFF_PROMPT.md](CLAUDE_KICKOFF_PROMPT.md) | Copy/paste bootstrap prompt for a new Claude session |
+
 ## Initial technical baseline
 
 Current first candidate stack:

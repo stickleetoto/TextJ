@@ -143,6 +143,19 @@ global hotkey
 - Make region capture -> clipboard the primary UX.
 - Measure end-to-end latency, not only model inference time.
 
+## Development handoff
+
+For autonomous/agent development:
+
+- [Claude instructions](CLAUDE.md)
+- [Claude handoff](docs/HANDOFF_CLAUDE.md)
+- [Execution plan](docs/EXECUTION_PLAN.md)
+- [Definition of done](docs/DEFINITION_OF_DONE.md)
+- [Development worklog](docs/DEV_WORKLOG.md)
+- [Claude kickoff prompt](docs/CLAUDE_KICKOFF_PROMPT.md)
+
+The handoff documents are intended to let a new development session continue from repository state without reconstructing the project from chat history.
+
 ## Documentation
 
 - [Docs index](docs/README.md)
