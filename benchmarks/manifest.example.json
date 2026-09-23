@@ -1,0 +1,16 @@
+{
+  "cases": [
+    {
+      "id": "ko-ui-001",
+      "image": "images/ko_ui_001.png",
+      "expected": "expected/ko_ui_001.txt",
+      "tags": ["KO", "UI"]
+    },
+    {
+      "id": "mix-code-001",
+      "image": "images/mix_code_001.png",
+      "expected": "expected/mix_code_001.txt",
+      "tags": ["MIX", "CODE"]
+    }
+  ]
+}

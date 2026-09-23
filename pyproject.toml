@@ -28,6 +28,7 @@ classifiers = [
 dependencies = [
   "rapidocr>=3.9,<4",
   "onnxruntime>=1.20,<2",
+  "psutil>=6,<8",
 ]
 
 [project.optional-dependencies]
@@ -38,6 +39,7 @@ dev = [
 [project.scripts]
 textj = "textj.app.cli:main"
 textj-bench = "textj.app.bench:main"
+textj-bench-suite = "textj.app.bench_suite:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

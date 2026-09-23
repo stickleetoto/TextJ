@@ -5,6 +5,8 @@ from pathlib import Path
 from statistics import median
 from typing import Any, Sequence
 
+import psutil
+
 from textj.pipeline import OCRPipeline
 
 
@@ -32,6 +34,7 @@ class BenchmarkSummary:
     runs: int
     warmups: int
     latencies_ms: tuple[float, ...]
+    rss_samples_mb: tuple[float, ...]
     mean_score: float
     line_count: int
     metadata: dict[str, Any]
@@ -56,6 +59,18 @@ class BenchmarkSummary:
     def mean_ms(self) -> float:
         return sum(self.latencies_ms) / len(self.latencies_ms)
 
+    @property
+    def sampled_peak_rss_mb(self) -> float:
+        return max(self.rss_samples_mb)
+
+    @property
+    def start_rss_mb(self) -> float:
+        return self.rss_samples_mb[0]
+
+    @property
+    def end_rss_mb(self) -> float:
+        return self.rss_samples_mb[-1]
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "backend": self.backend,
@@ -67,6 +82,11 @@ class BenchmarkSummary:
                 "p50": round(self.p50_ms, 3),
                 "p95": round(self.p95_ms, 3),
                 "max": round(self.maximum_ms, 3),
+            },
+            "memory_mb": {
+                "start_rss": round(self.start_rss_mb, 3),
+                "sampled_peak_rss": round(self.sampled_peak_rss_mb, 3),
+                "end_rss": round(self.end_rss_mb, 3),
             },
             "mean_score": round(self.mean_score, 6),
             "line_count": self.line_count,
@@ -87,15 +107,19 @@ def run_benchmark(
     if warmups < 0:
         raise ValueError("warmups cannot be negative")
 
+    process = psutil.Process()
+
     for _ in range(warmups):
         pipeline.run(image_path)
 
     samples: list[float] = []
+    rss_samples: list[float] = [process.memory_info().rss / (1024 * 1024)]
     last_result = None
 
     for _ in range(runs):
         last_result = pipeline.run(image_path)
         samples.append(last_result.total_ms)
+        rss_samples.append(process.memory_info().rss / (1024 * 1024))
 
     assert last_result is not None
 
@@ -104,6 +128,7 @@ def run_benchmark(
         runs=runs,
         warmups=warmups,
         latencies_ms=tuple(samples),
+        rss_samples_mb=tuple(rss_samples),
         mean_score=last_result.mean_score,
         line_count=len(last_result.lines),
         metadata=dict(last_result.metadata),

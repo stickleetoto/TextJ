@@ -12,6 +12,8 @@ The roadmap deliberately builds the measurable OCR core before the desktop UX.
 
 # v0.1 — OCR Core
 
+**Status: core implementation present; real-device validation pending.**
+
 Goal: prove that TextJ can recognize Korean/English text from an image through a clean internal API.
 
 ### Deliverables
@@ -48,6 +50,8 @@ recognized text...
 ---
 
 # v0.2 — Benchmark Foundation
+
+**Status: IN PROGRESS — runner, p50/p95, RSS sampling, CER, JSON persistence, manifests and suite runner implemented.**
 
 Goal: make performance measurable before optimization begins.
 

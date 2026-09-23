@@ -78,6 +78,27 @@ Machine-readable benchmark:
 textj-bench screenshot.png --runs 20 --warmups 2 --json
 ```
 
+Measure OCR accuracy against expected text and save the result:
+
+```bash
+textj-bench screenshot.png \
+  --expected expected.txt \
+  --runs 20 \
+  --warmups 2 \
+  --output benchmarks/results/sample.json
+```
+
+Run a multi-image regression suite:
+
+```bash
+textj-bench-suite benchmarks/manifest.json \
+  --runs 10 \
+  --warmups 1 \
+  --output benchmarks/results/baseline.json
+```
+
+The benchmark output records p50/p95 latency, sampled RSS memory, OCR confidence, CER when ground truth exists, and system/runtime metadata.
+
 English recognition model:
 
 ```bash
