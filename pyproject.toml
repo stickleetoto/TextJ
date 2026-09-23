@@ -37,6 +37,7 @@ dev = [
 
 [project.scripts]
 textj = "textj.app.cli:main"
+textj-bench = "textj.app.bench:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

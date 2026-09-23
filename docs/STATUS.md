@@ -24,6 +24,10 @@ Status: **implementation started**
 - end-to-end timing
 - RapidOCR internal detector/classifier/recognizer timing export when available
 - basic result model tests
+- backend-independent pipeline tests
+- warm OCR benchmark runner
+- p50 / p95 / min / mean / max latency reporting
+- `textj-bench` command with JSON output
 
 ## Current command
 
@@ -59,9 +63,9 @@ Subsequent OCR should use the local cached model files.
 - run first real Korean screenshot benchmark
 - validate model download/cache behavior on Windows
 - record cold vs warm latency
-- add more backend-independent tests
-- add a tiny benchmark CLI
+- run the new benchmark CLI on real Korean/English screenshots
 - create a small Korean/English fixture set
+- add CER calculation and benchmark result persistence
 
 ### then v0.2
 

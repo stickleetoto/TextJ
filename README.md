@@ -66,6 +66,18 @@ Structured output:
 textj screenshot.png --json
 ```
 
+Warm latency benchmark:
+
+```bash
+textj-bench screenshot.png --runs 20 --warmups 2
+```
+
+Machine-readable benchmark:
+
+```bash
+textj-bench screenshot.png --runs 20 --warmups 2 --json
+```
+
 English recognition model:
 
 ```bash
