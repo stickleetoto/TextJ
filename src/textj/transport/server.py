@@ -35,6 +35,8 @@ from textj.transport.framing import LineTooLong, decode_message, read_line, too_
 
 log = logging.getLogger("textj.server")
 
+_IS_WINDOWS = os.name == "nt"
+
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 47631
 
@@ -115,7 +117,9 @@ class _Handler(socketserver.StreamRequestHandler):
 
 class TextJServer(socketserver.ThreadingTCPServer):
     daemon_threads = True
-    allow_reuse_address = True
+    # On Windows SO_REUSEADDR lets another process bind the same port and
+    # steal connections; use SO_EXCLUSIVEADDRUSE there instead (server_bind).
+    allow_reuse_address = not _IS_WINDOWS
 
     def __init__(
         self,
@@ -139,6 +143,12 @@ class TextJServer(socketserver.ThreadingTCPServer):
         if ":" in host:
             self.address_family = socket.AF_INET6
         super().__init__((host, port), _Handler)
+
+    def server_bind(self) -> None:
+        exclusive = getattr(socket, "SO_EXCLUSIVEADDRUSE", None)
+        if _IS_WINDOWS and exclusive is not None:
+            self.socket.setsockopt(socket.SOL_SOCKET, exclusive, 1)
+        super().server_bind()
 
     @property
     def port(self) -> int:

@@ -102,7 +102,7 @@ Human CLI and clipboard paths are secondary adapters/debugging tools.
 
 ### Tests
 
-`pytest -q`: 130 tests, no model downloads (fake backends / injected engine),
+`pytest -q`: 132 tests, no model downloads (fake backends / injected engine),
 incl. Unicode round-trips (Hangul, Windows paths, URLs, symbols) through the
 Python API, JSON, stdio, TCP and MCP.
 `pytest -m integration`: real OCR. Here: 9 passed (English fixtures + MCP
@@ -135,8 +135,21 @@ Linux 4-vCPU container, PP-OCRv6 small, English fixtures:
   pytest -m integration
   python benchmarks/tools/validate_languages.py
   ```
-- **No Windows validation**: all runs were on Linux. Clipboard adapter and
-  Windows path handling are untested on Windows.
+- **No Windows validation**: all runs were on Linux. Static review + tests
+  done for Windows-specific risks:
+  - daemon: `SO_REUSEADDR` replaced by `SO_EXCLUSIVEADDRUSE` on Windows
+    (prevents another process binding the port) — unit-tested
+  - protocol stdout (`textj-serve --stdio`, `textj-mcp`) writes UTF-8 bytes to
+    the binary buffer; tested with hostile `PYTHONIOENCODING`; CRLF input lines
+    are accepted
+  - human CLIs force UTF-8 stdout when the pipe encoding is cp949/cp1252
+  - Hangul file/folder names as `path` inputs: tested (images are read as
+    bytes by Python, never by OpenCV path APIs)
+  - model cache default `%LOCALAPPDATA%\TextJ\models`
+  - state file: `0o600` has no effect on Windows; protection relies on the
+    per-user profile directory ACL (`%USERPROFILE%\.textj`)
+  Still needs a real Windows run: install, ONNX Runtime/RapidOCR wheels,
+  model cache, `textj-serve`, `textj-client`, `textj-mcp`, Ctrl+C/SIGTERM.
 
 ## Known limitations
 

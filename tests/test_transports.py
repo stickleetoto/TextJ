@@ -191,3 +191,22 @@ def test_state_file_permissions_and_discovery(tmp_path, daemon) -> None:
         assert client.status()["ok"]
     with pytest.raises(TextJClientError):
         TextJClient.from_state_file(tmp_path / "missing.json")
+
+
+def test_windows_uses_exclusive_address_use(monkeypatch) -> None:
+    from textj.transport import server as server_module
+
+    calls = []
+
+    class FakeSocket:
+        def setsockopt(self, level, option, value):
+            calls.append((level, option, value))
+
+    monkeypatch.setattr(server_module, "_IS_WINDOWS", True)
+    monkeypatch.setattr(server_module.socket, "SO_EXCLUSIVEADDRUSE", -5, raising=False)
+    instance = object.__new__(TextJServer)
+    instance.socket = FakeSocket()
+    monkeypatch.setattr(server_module.socketserver.TCPServer, "server_bind", lambda self: None)
+    TextJServer.server_bind(instance)
+    assert calls == [(socket.SOL_SOCKET, -5, 1)]
+    assert TextJServer.allow_reuse_address is (os.name != "nt")

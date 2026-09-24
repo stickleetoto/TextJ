@@ -366,3 +366,38 @@ def test_preserve_indent_option(make_runtime, png_path) -> None:
     assert response["result"]["text"] == "안녕하세요 TextJ\nlow"
     bad = runtime.handle(path_request(png_path, options={"preserve_indent": "yes"}))
     assert bad["error"]["code"] == "INVALID_REQUEST"
+
+
+class LanguageByWidthBackend(ControllableBackend):
+    """Returns EN / KO / MIX text depending on image width; fails on width 13."""
+
+    TEXT = {40: "Save changes", 41: "저장하기", 42: "설정에서 CUDA provider를 활성화하세요"}
+
+    def recognize(self, image):
+        from textj.backends.base import BackendResult
+        from textj.models import OCRLine
+
+        width = image.shape[1]
+        if width == 13:
+            raise RuntimeError("engine failure on this item")
+        return BackendResult(lines=(OCRLine(self.TEXT[width], 0.9, None),))
+
+
+def test_mixed_language_batch_with_failing_item(make_runtime) -> None:
+    runtime = make_runtime(LanguageByWidthBackend(), warmup=False)
+    items = [
+        {"id": "en", "input": {"type": "bytes_base64", "data": b64(png_bytes(40, 20))}},
+        {"id": "ko", "input": {"type": "bytes_base64", "data": b64(png_bytes(41, 20))}},
+        {"id": "boom", "input": {"type": "bytes_base64", "data": b64(png_bytes(13, 20))}},
+        {"id": "mix", "input": {"type": "bytes_base64", "data": b64(png_bytes(42, 20))}},
+    ]
+    response = runtime.handle(request("ocr_batch", items=items))
+    result = response["result"]
+    assert response["ok"]
+    assert [i["id"] for i in result["items"]] == ["en", "ko", "boom", "mix"]
+    assert result["items"][0]["result"]["text"] == "Save changes"
+    assert result["items"][1]["result"]["text"] == "저장하기"
+    assert result["items"][2]["error"]["code"] == "OCR_FAILED"
+    assert result["items"][3]["result"]["text"] == "설정에서 CUDA provider를 활성화하세요"
+    assert (result["succeeded"], result["failed"]) == (3, 1)
+    assert runtime.status()["state"] == "ready"

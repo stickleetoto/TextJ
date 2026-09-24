@@ -40,7 +40,9 @@ daemon / MCP path and validate Korean with the real model.
 
 ### Tests / measurements
 
-- `pytest -q`: 130 passed; `pytest -m integration`: 9 passed, 23 skipped (Korean)
+- `pytest -q`: 132 passed; `pytest -m integration`: 9 passed, 23 skipped (Korean)
+- Windows hardening: daemon uses SO_EXCLUSIVEADDRUSE on Windows; mixed-language
+  batch unit test with a failing item
 - bundled PP-OCRv6 per tag: EN CER 0.0141, KO 0.8799, MIX 0.3216
 - offline audit (PP-OCRv6): 0 network events; RSS idle 177.0 MB, after OCR 252.1 MB
 
