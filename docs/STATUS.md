@@ -1,6 +1,6 @@
 # Development Status
 
-Last updated: 2026-09-24
+Last updated: 2026-09-24 (session 2)
 
 ## Product direction
 
@@ -15,7 +15,10 @@ Human CLI and clipboard paths are secondary adapters/debugging tools.
 ## Current milestone
 
 - v0.1 OCR core: implemented; real-model validation done for **English only**
-  (PP-OCRv6 small, Linux). Korean pending (model download blocked here).
+  (PP-OCRv6 small, Linux). **Korean and mixed Korean/English are NOT yet
+  validated with a real Korean model** — the model host is blocked in the dev
+  sandbox. Everything needed is in place and runs with one command once the
+  model is cached (see Blockers).
 - v0.2 benchmark foundation: implemented (suite, comparator, fixtures, runtime bench).
 - v0.3 protocol v1: **implemented** (`docs/AI_TOOL_PROTOCOL.md`).
 - v0.4 resident runtime: **implemented** (`TextJRuntime`).
@@ -31,8 +34,15 @@ Human CLI and clipboard paths are secondary adapters/debugging tools.
 
 - backend interface (`recognize`, `describe`, `close`)
 - RapidOCR backend with profiles:
-  - `ppocrv5-mobile` (default; Korean/English/Chinese; downloads models once)
-  - `ppocrv6-small` (bundled in the rapidocr wheel, offline, **no Hangul**)
+  - `ppocrv5-mobile` (default) with language `ko-en` (default, Korean PP-OCRv5
+    recognizer) or `en`; files fetched once into the TextJ model cache
+  - `ppocrv6-small` (bundled in the rapidocr wheel, offline, English only —
+    measured KO CER 0.8799)
+- model resolver/cache (`textj.model_store`, `textj-models`): SHA256-pinned,
+  per-user cache, offline mode, mirror override, manual import; explicit model
+  paths so the engine never downloads (`docs/MODELS.md`)
+- language policy (`textj.languages`): runtime `ko-en` | `en`; request option
+  `auto` | `ko-en` | `korean` | `en` as a coverage requirement
 - detector resize policy options; TextJ default `max`, 1280 (measured, see
   `docs/BENCHMARK_RESULTS.md`)
 - fixed: RapidOCR reports `None` for the skipped classifier stage; the backend
@@ -81,14 +91,25 @@ Human CLI and clipboard paths are secondary adapters/debugging tools.
   (thresholds, exit code 1 on regression), `textj-bench-runtime`
 - artifacts include textj version, git commit, image dimensions, backend config,
   package versions
-- `benchmarks/fixtures/`: 11 synthetic cases with ground truth (EN, UI, URL,
-  CODE, TERM, DARK, TINY, KO, MIX, screen-sized L) + generator script
+- `benchmarks/fixtures/`: 20 synthetic cases with ground truth — EN (5),
+  KO (5: sentence, UI, numbers, punctuation, dark UI), MIX (7: tech terms,
+  Windows/Unix paths, URLs, library/model names, numbers, terminal, UI),
+  plus CODE/TERM/DARK/TINY/screen-sized L — and the generator script
+- suite results aggregate per tag (EN / KO / MIX separately), comparator
+  compares tag scopes
+- `benchmarks/tools/validate_languages.py`: one-command EN/KO/MIX validation
+  (accuracy, latency, RSS, offline audit)
 
 ### Tests
 
-`pytest -q`: 112 tests, no model downloads (fake backends / injected engine).
-`pytest -m integration`: real OCR on fixtures with bundled PP-OCRv6 (8 pass);
-Korean cases run only with `TEXTJ_KOREAN_MODELS=1` (downloads models).
+`pytest -q`: 130 tests, no model downloads (fake backends / injected engine),
+incl. Unicode round-trips (Hangul, Windows paths, URLs, symbols) through the
+Python API, JSON, stdio, TCP and MCP.
+`pytest -m integration`: real OCR. Here: 9 passed (English fixtures + MCP
+subprocess on bundled PP-OCRv6), 23 skipped (Korean). The ko-en tests (all
+fixtures through one ko-en runtime, mixed-language batch, stdio, MCP
+subprocess with Korean) run automatically once `textj-models fetch` has cached
+the Korean model.
 
 ## Measured (see `docs/BENCHMARK_RESULTS.md`)
 
@@ -102,17 +123,27 @@ Linux 4-vCPU container, PP-OCRv6 small, English fixtures:
 
 ## Blockers
 
-- **Korean model unavailable in the dev sandbox**: RapidOCR downloads
-  PP-OCRv5 Korean models from modelscope.cn; the sandbox proxy denies it
-  (HuggingFace too). KO/MIX fixtures exist but have no measured results.
-  Validate on a machine with network access:
-  `textj-bench-suite benchmarks/fixtures/manifest.json --runs 10 --warmups 2`
+- **Korean model unavailable in the dev sandbox**: the official source
+  (`www.modelscope.cn`) is denied by the sandbox network policy; HuggingFace,
+  Baidu BOS and conda are denied too. PyPI and npm were searched exhaustively
+  for a redistributed `korean_PP-OCRv5_rec_mobile.onnx`: none found (only
+  Chinese/English/Latin/Japanese PP-OCR models). Fix: allow `www.modelscope.cn`
+  (and its storage redirect host) in the environment's network settings, or run
+  on any networked machine:
+  ```bash
+  textj-models fetch && textj-models fetch --language en
+  pytest -m integration
+  python benchmarks/tools/validate_languages.py
+  ```
 - **No Windows validation**: all runs were on Linux. Clipboard adapter and
   Windows path handling are untested on Windows.
 
 ## Known limitations
 
-- one language per runtime (the loaded recognizer); `options.language` must match
+- one recognizer per runtime (default ko-en); `options.language` is checked
+  against what the loaded recognizer serves
+- whether the ko-en recognizer matches the en recognizer on English text is
+  unmeasured (decides if dual residency is ever needed)
 - running inference cannot be cancelled; a timed-out request keeps its slot
   until the backend returns
 - line order is backend order; no layout reconstruction

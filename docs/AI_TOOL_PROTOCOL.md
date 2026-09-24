@@ -93,11 +93,18 @@ URLs are **not** accepted as input.
 | Option | Type | Default | Meaning |
 | --- | --- | --- | --- |
 | `mode` | string | `"fast"` | Only `fast` exists in v1. Other values → `INVALID_REQUEST`. |
-| `language` | string | runtime's | If given, must equal the runtime's loaded language, else `INVALID_REQUEST` with `details.supported`. |
+| `language` | string | `auto` | One of `auto`, `ko-en`, `korean` (alias of `ko-en`), `en`. A **requirement**, not a model switch: `auto` uses the loaded recognizer; `ko-en` needs a Korean-capable runtime; `en` is served by both `ko-en` and `en` runtimes. Unserved → `INVALID_REQUEST` with `details.loaded` / `details.supported`. Other values → `INVALID_REQUEST`. |
 | `min_score` | number 0..1 | `0.5` | Lines with confidence below this are dropped. |
 | `include_boxes` | bool | `true` | Emit `box` per line. |
 | `include_timings` | bool | `true` | Emit `timings_ms`. |
 | `preserve_indent` | bool | `false` | Rebuild leading indentation in `text` from line box positions. Use for **code/terminal** (monospace) crops only; on scattered UI layouts it inserts large bogus indents. `lines[].text` is never modified. |
+
+### Language model
+
+A runtime loads **one** recognizer (`RuntimeConfig.language`, default `ko-en`).
+Callers are not expected to know an image's language: the default `ko-en`
+recognizer is intended for Korean, English and mixed screens, so requests can
+omit `language`. See `docs/MODELS.md` for the model files per language.
 
 ---
 
@@ -224,7 +231,7 @@ far enough to read it.
 | `IMAGE_DECODE_FAILED` | no | bytes are not a decodable image |
 | `UNSUPPORTED_IMAGE` | no | zero-size image, bad dtype/channel count |
 | `REQUEST_TOO_LARGE` | no | message, encoded image, pixels, side, or batch size over limit |
-| `BACKEND_NOT_READY` | starting: yes / failed or closing: no | runtime not ready (`details.state`) |
+| `BACKEND_NOT_READY` | starting: yes / failed or closing: no | runtime not ready (`details.state`); `details.reason: "MODEL_MISSING"` when model files are not cached and downloads are disabled or failed (fix: `textj-models fetch`, see `docs/MODELS.md`) |
 | `BUSY` | yes | admission capacity full (`details.max_inflight`, `details.max_queue`) |
 | `TIMEOUT` | yes | deadline passed while queued or running (`details.timeout_ms`) |
 | `OCR_FAILED` | no | backend raised during recognition |
@@ -282,7 +289,7 @@ Daemon transport (`textj-serve --tcp`):
 
 Result fields: `state` (`created|starting|ready|failed|closing|closed`),
 `ready`, `protocol_version`, `textj_version`, `backend` (name, profile,
-language, detector limits), `failure`, `uptime_s`, `startup_ms`
+language, `languages_served`, `model_files`, detector limits), `failure`, `uptime_s`, `startup_ms`
 (`backend_construct_ms`, `warmup_ms`), `scheduler` (`max_inflight`,
 `max_queue`, `inflight`, `queued`), `limits`, `counters` (`requests`, `ok`,
 `errors`, `busy_rejects`, `timeouts`), `errors_by_code`, `latency_ms`

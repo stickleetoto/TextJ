@@ -24,6 +24,23 @@ Checkboxes are honest: `[x]` = implemented and tested; `[~]` = partially done
 - [x] record first known OCR failures (indentation, repeated spaces, `AI`→`Al`)
 - [ ] validate on target Windows machine — **blocked**: no Windows here
 
+## A2. English + Korean v1 (session 2)
+
+- [x] model resolver/cache with SHA256 pins, offline mode, import (`textj-models`)
+- [x] language policy: runtime `ko-en` (default) | `en`; request `auto|ko-en|korean|en`
+- [x] missing model → `BACKEND_NOT_READY` + `details.reason=MODEL_MISSING`
+- [x] KO/MIX fixtures per category (sentence, UI, numbers, punctuation, dark,
+      tech terms, paths, URLs, library names, terminal)
+- [x] per-tag (EN/KO/MIX) benchmark aggregates + comparator scopes
+- [x] Unicode round-trip tests on every interface; UTF-8 stdout for CLIs
+- [x] offline audit: 0 network events (bundled model run)
+- [x] integration tests for ko-en runtime / mixed batch / stdio / MCP subprocess
+- [ ] **run them with the real Korean model** — blocked: model host denied here
+- [ ] KO/MIX CER + p50/p95 + RSS with ko-en; max1280 vs default det on Korean
+- [ ] English on ko-en vs en recognizer → decide single vs dual residency
+- [ ] offline audit with ko-en
+- [ ] Windows run of textj-serve / textj-client / textj-mcp with Korean model
+
 ---
 
 # Phase B — Benchmark Foundation
@@ -151,7 +168,7 @@ Every change must report p50/p95/CER (use `textj-bench-compare`).
 - [ ] headless service packaging (PyInstaller / Nuitka evaluation)
 - [x] deterministic config file (TOML) for runtime + limits + server
       (`--config`, strict keys, flags override; `examples/textj.toml`)
-- [ ] model cache/offline behavior: document + `textj-models` prefetch command
+- [x] model cache/offline behavior: `textj-models`, `docs/MODELS.md`
 - [x] startup readiness (`status.state`, `BACKEND_NOT_READY`)
 - [ ] local logging to file (currently stderr)
 - [ ] crash recovery / supervisor guidance
@@ -163,13 +180,16 @@ Every change must report p50/p95/CER (use `textj-bench-compare`).
 
 # Next concrete tasks (in order)
 
-1. On a networked machine: run KO/MIX fixtures with `ppocrv5-mobile`, add to
-   `docs/BENCHMARK_RESULTS.md`, confirm `max 1280` does not hurt Korean CER.
-2. Add HARD and XL fixtures; sweep `det_limit_side_len` for large screenshots.
-3. Size-dependent ORT thread policy experiment (2 threads helped tiny crops).
-4. Model prefetch/offline command and cache documentation.
+1. With network access to `www.modelscope.cn`: `textj-models fetch`,
+   `textj-models fetch --language en`, `pytest -m integration`,
+   `python benchmarks/tools/validate_languages.py`; record results in
+   `docs/BENCHMARK_RESULTS.md`; fix whatever the Korean run exposes
+   (ordering, spacing, `₩`/`\` confusion, punctuation).
+2. Decide single (ko-en only) vs dual (ko-en + en) residency from the
+   measured English CER on both recognizers and the RSS table.
+3. Windows validation (same commands; plus daemon/client/MCP with Hangul paths).
+4. Add HARD and XL fixtures; sweep `det_limit_side_len` for large screenshots.
 5. Packaging evaluation (PyInstaller vs Nuitka: size, cold start, idle RSS).
-6. Validate `textj-mcp` with a real MCP client config.
 
 ---
 

@@ -39,9 +39,15 @@ AI Agent
 
 ## Current status
 
-**Protocol v1, the resident runtime, stdio/daemon transports and an MCP adapter are implemented.**
-Real-model validation so far: English on Linux (see [benchmark results](docs/BENCHMARK_RESULTS.md)).
-Korean model validation and Windows validation are pending. Details: [STATUS](docs/STATUS.md).
+**Protocol v1, the resident runtime, stdio/daemon transports, batch, and an MCP adapter are implemented.**
+
+| Language path | Model | Validation |
+| --- | --- | --- |
+| English | PP-OCRv6 small (bundled, offline) | real OCR + benchmarks on Linux |
+| Korean / Korean+English (default `ko-en`) | PP-OCRv5 Korean recognizer | **not yet validated** — model download was blocked in the dev environment; tests and benchmark tooling are ready |
+
+Windows has not been validated yet. Details: [STATUS](docs/STATUS.md),
+[benchmark results](docs/BENCHMARK_RESULTS.md).
 
 ## Install
 
@@ -52,9 +58,22 @@ python -m pip install -U pip
 pip install -e ".[dev]"
 ```
 
-The default profile `ppocrv5-mobile` downloads its Korean/English models on first
-start (network needed once). `--profile ppocrv6-small --language en` uses models
-bundled with rapidocr and works fully offline, but has no Korean.
+### Models
+
+```bash
+textj-models fetch          # Korean+English (ko-en) models, SHA256-verified, once
+textj-models status         # what is cached, where
+```
+
+After that TextJ runs fully offline (`TEXTJ_OFFLINE=1` forbids any download).
+`--profile ppocrv6-small --language en` needs no download (bundled) but has no
+Korean. Cache paths, mirrors and offline import: [docs/MODELS.md](docs/MODELS.md).
+
+### Languages
+
+One runtime loads one recognizer: `ko-en` (default, Korean + English + mixed)
+or `en`. Callers do not need to know the image language; the optional request
+option `language` (`auto` | `ko-en` | `en`) only asserts what the runtime must serve.
 
 ## Use from an agent
 
@@ -63,7 +82,7 @@ bundled with rapidocr and works fully offline, but has no Korean.
 ```python
 from textj import RuntimeConfig, TextJRuntime
 
-runtime = TextJRuntime(RuntimeConfig(language="korean")).start()   # loads + warms once
+runtime = TextJRuntime(RuntimeConfig(language="ko-en")).start()    # loads + warms once
 response = runtime.ocr("frame.png")                  # or ndarray (BGR) / encoded bytes
 if response["ok"]:
     print(response["result"]["text"])
@@ -162,6 +181,7 @@ These are optional or lower priority:
 - [Performance](docs/PERFORMANCE.md)
 - [Benchmark matrix](docs/BENCHMARK_MATRIX.md)
 - [Benchmark results](docs/BENCHMARK_RESULTS.md)
+- [Models](docs/MODELS.md)
 - [OCR engine](docs/OCR_ENGINE.md)
 - [Optimization](docs/OPTIMIZATION.md)
 - [Technology radar](docs/TECH_RADAR.md)

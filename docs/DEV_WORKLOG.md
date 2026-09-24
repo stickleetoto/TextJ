@@ -4,6 +4,53 @@ Keep newest entries first.
 
 ---
 
+## 2026-09-24 (session 2) — English + Korean v1 groundwork
+
+### Goal
+
+Make EN / KO / MIX work through the same Protocol v1 / runtime / batch /
+daemon / MCP path and validate Korean with the real model.
+
+### Korean model acquisition (blocked)
+
+- `www.modelscope.cn` (official RapidOCR host), `huggingface.co`, Baidu BOS,
+  conda/anaconda, jsDelivr/unpkg: denied by the sandbox network policy.
+- PyPI (full simple index scanned for OCR/PaddleOCR/ONNX names) and npm
+  (registry search) inspected for a redistributed Korean PP-OCR ONNX file:
+  none. Found only Chinese PP-OCRv5 (dict has 2 Hangul syllables), EN/Latin/
+  Japanese v3/v4, PP-OCRv6 small. `multilingual-purejs-ocr` ships a Korean
+  dict but no Korean model.
+- Result: Korean not validated in this session. No numbers invented.
+
+### Changed
+
+- `textj.model_store` + `textj-models` (status/fetch/import/path): SHA256
+  pins from rapidocr's catalog, per-user cache, `TEXTJ_OFFLINE`,
+  `TEXTJ_MODEL_BASE_URL`, explicit model paths (engine never downloads)
+- language policy: `ko-en` default (alias `korean`), `en`; request language is
+  a coverage requirement; `ch` removed from public choices (unverified)
+- `MODEL_MISSING` reason on `BACKEND_NOT_READY` (start + later requests)
+- 9 new KO/MIX fixtures; backslash drawn with a Latin font (NanumGothic draws
+  U+005C as `₩`, which would have corrupted the path fixture's ground truth)
+- per-tag suite aggregates; comparator tag scopes
+- Unicode tests across all interfaces; UTF-8 stdout for human CLIs
+- Korean integration tests (auto-run once models are cached); MCP subprocess
+  test with hostile PYTHONIOENCODING (English variant passes now)
+- `benchmarks/tools/validate_languages.py`; `docs/MODELS.md`
+
+### Tests / measurements
+
+- `pytest -q`: 130 passed; `pytest -m integration`: 9 passed, 23 skipped (Korean)
+- bundled PP-OCRv6 per tag: EN CER 0.0141, KO 0.8799, MIX 0.3216
+- offline audit (PP-OCRv6): 0 network events; RSS idle 177.0 MB, after OCR 252.1 MB
+
+### Next
+
+Run the validation with network access to the model host (see EXECUTION_PLAN
+"Next concrete tasks" #1), then decide single vs dual residency.
+
+---
+
 ## 2026-09-24 — TOML config
 
 - `textj.config`: `config_version`, `[runtime]`, `[limits]`, `[server]`; unknown

@@ -43,9 +43,15 @@ As of 2026-09-24 (see `docs/STATUS.md` for the authoritative list):
   measured numbers in `docs/BENCHMARK_RESULTS.md`
 - clipboard code kept as a debug adapter
 
-Blocked in the cloud sandbox: Korean model download (modelscope/HF denied),
-Windows validation. Use `--profile ppocrv6-small --language en` for offline
-English runs.
+- model resolver/cache `textj-models` (`docs/MODELS.md`), language policy
+  `ko-en` (default) / `en`, EN/KO/MIX fixtures, one-command validation
+  `benchmarks/tools/validate_languages.py`
+
+Blocked in the cloud sandbox: Korean model download (www.modelscope.cn denied;
+PyPI/npm searched, no redistributed copy), Windows validation. Korean is NOT
+validated yet — do that first when the model host is reachable (EXECUTION_PLAN
+"Next concrete tasks" #1). Use `--profile ppocrv6-small --language en` for
+offline English runs.
 
 ## First job
 

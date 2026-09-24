@@ -148,12 +148,60 @@ Runtime, PP-OCRv6 small, `options.preserve_indent` off vs on, CER:
 Fixes code indentation; destroys scattered UI layouts. Therefore opt-in and
 documented as code/terminal-only.
 
+## 2026-09-24 (session 2) — per-language fixture run, offline check
+
+Same machine/software as above. Corpus: all 20 fixtures in
+`benchmarks/fixtures/manifest.json` (EN 5, KO 5, MIX 7 by tag; tags overlap).
+Command: `python benchmarks/tools/validate_languages.py --runs 10 --warmups 2`.
+
+The three PP-OCRv5 configurations (ko-en max1280, ko-en with RapidOCR's default
+detector, en max1280) were **skipped: model files not cached**. The model host
+(`www.modelscope.cn`) is denied by this sandbox's network policy.
+
+### PP-OCRv6 small (bundled, `--language en`), det max 1280
+
+| Tag | Cases | mean p50 ms | mean p95 ms | mean CER | max sampled RSS MB |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| EN | 5 | 170.9 | 190.3 | 0.0141 | 203.1 |
+| KO | 5 | 79.4 | 90.3 | 0.8799 | 228.1 |
+| MIX | 7 | 102.4 | 115.8 | 0.3216 | 228.2 |
+| CODE | 1 | 151.0 | 164.6 | 0.0741 | 220.1 |
+| TERM | 2 | 118.5 | 133.1 | 0.1250 | 228.2 |
+| URL | 2 | 124.1 | 141.7 | 0.0929 | 228.2 |
+| PATH | 1 | 108.3 | 118.8 | 0.2571 | 228.2 |
+| NUM | 2 | 84.8 | 103.8 | 0.5374 | 228.2 |
+| TINY | 1 | 60.0 | 76.6 | 0.0000 | 203.1 |
+| DARK | 4 | 88.9 | 101.5 | 0.3125 | 228.2 |
+
+- KO 0.8799 / MIX 0.3216 CER: the bundled model cannot read Hangul (it
+  outputs CJK look-alikes or drops Hangul). This is the measured reason the
+  default runtime language is `ko-en` (PP-OCRv5 Korean) and why `ppocrv6-small`
+  is documented as English-only.
+- EN CER here (0.0141, 5 cases) differs from the earlier 8-case table because
+  the tag set differs (the earlier table grouped EN/CODE/TERM/DARK/TINY).
+
+### Offline check
+
+Fresh process, `TEXTJ_OFFLINE=1`, `model_download="never"`, Python audit hook on
+`socket.connect`, `socket.getaddrinfo`, `urllib.Request`, `http.client.connect`;
+runtime start + OCR of en-url-001, ko-para-001, mix-tech-001, mix-path-001:
+**0 network events** (PP-OCRv6 small). Repeat with ko-en once the model is cached.
+
+### Resident memory (PP-OCRv6 small, en)
+
+| Python baseline | idle after runtime start | after OCR of 4 fixtures |
+| ---: | ---: | ---: |
+| 61.6 MB | 177.0 MB | 252.1 MB |
+
 ---
 
 ## Pending measurements
 
-- Korean / mixed fixtures with `ppocrv5-mobile` (blocked: model download host
-  unreachable from the development sandbox).
+- **Korean / mixed fixtures with `ppocrv5-mobile` ko-en** (blocked: model host
+  unreachable from the development sandbox). One command once models are cached:
+  `python benchmarks/tools/validate_languages.py` (EN/KO/MIX p50/p95/CER/RSS,
+  max1280 vs RapidOCR default detector on Korean, en vs ko-en on English,
+  offline check, one vs two resident recognizers).
 - Target Windows hardware.
 - 1440p / 4K screenshots and detector side-length sweep for them.
 - Idle RSS of a long-running daemon; RSS with `max_inflight > 1`.
