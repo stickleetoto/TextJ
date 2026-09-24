@@ -46,6 +46,10 @@ _OPTION_PROPERTIES: dict[str, Any] = {
         "type": "boolean",
         "description": "Include stage timings in milliseconds (default true).",
     },
+    "preserve_indent": {
+        "type": "boolean",
+        "description": "Rebuild leading indentation from box positions (code/terminal text). Default false.",
+    },
     "timeout_ms": {
         "type": "integer", "minimum": 1,
         "description": "Fail with TIMEOUT if not finished within this many ms (default 30000).",
@@ -136,7 +140,7 @@ def _image_input(args: Mapping[str, Any], where: str) -> dict[str, Any]:
 def _options(args: Mapping[str, Any]) -> dict[str, Any] | None:
     options = {
         key: args[key]
-        for key in ("min_score", "include_boxes", "include_timings")
+        for key in ("min_score", "include_boxes", "include_timings", "preserve_indent")
         if key in args
     }
     return options or None

@@ -133,10 +133,12 @@ Every change must report p50/p95/CER (use `textj-bench-compare`).
 - [ ] large screenshot sweep (1440p/4K) for `det_limit_side_len`
 - [ ] detection dominates 1280×720 (~80%): try `det_limit_side_len` 960 on
       large inputs only, `box_thresh`/`unclip_ratio`, dilation off
-- [ ] ONNX Runtime thread settings (`intra_op_num_threads`) vs latency and burst
+- [x] ONNX Runtime thread settings: all-cores default kept (measured); small crops
+      faster with 2 threads — size-dependent policy is an open experiment
 - [ ] recognizer batch size (`rec_batch_num`) vs latency
-- [ ] code/terminal fidelity: preserve indentation / repeated spaces from box
-      geometry (postprocess), fixture-driven
+- [x] code/terminal indentation: opt-in `options.preserve_indent` (code CER
+      0.0741 → 0; harmful on UI layouts, so off by default)
+- [ ] repeated inner spaces (`File   Edit`) — needs word boxes (`return_word_box`)
 - [ ] crop filtering / tiny-noise suppression
 - [ ] INT8/FP16 experiments
 - [ ] shared-memory input experiment (only if decode/transport shows up in profiles;
@@ -163,11 +165,9 @@ Every change must report p50/p95/CER (use `textj-bench-compare`).
 1. On a networked machine: run KO/MIX fixtures with `ppocrv5-mobile`, add to
    `docs/BENCHMARK_RESULTS.md`, confirm `max 1280` does not hurt Korean CER.
 2. Add HARD and XL fixtures; sweep `det_limit_side_len` for large screenshots.
-3. ORT thread-count experiment (`intra_op_num_threads`) for single-request
-   latency and burst behavior.
-4. Indentation/space-preserving postprocess for CODE/TERM fixtures (opt-in
-   option, measured).
-5. TOML config for `textj-serve` / `textj-mcp`.
+3. Size-dependent ORT thread policy experiment (2 threads helped tiny crops).
+4. TOML config for `textj-serve` / `textj-mcp` (runtime config + limits).
+5. Model prefetch/offline command and cache documentation.
 6. Packaging evaluation.
 
 ---

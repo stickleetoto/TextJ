@@ -119,6 +119,35 @@ Each ONNX Runtime session already uses all cores, so parallel sessions contend
 on this 4-vCPU machine: more in-flight workers lowered throughput and raised
 p95. Default stays `max_inflight = 1`. Re-measure on the target machine.
 
+### ONNX Runtime intra-op threads (direct RapidOCR engine)
+
+Direct `RapidOCR(...)` calls with `Det.limit_type=max, 1280`, PP-OCRv6 small,
+2 warmups + 10 runs; p50 / max in ms. Ad-hoc script, not a TextJ command.
+
+| intra_op_num_threads | en-para-001 552×131 | screen-en-001 1280×720 | en-ui-001 171×92 |
+| ---: | ---: | ---: | ---: |
+| -1 (all cores, default) | 165.4 / 187.5 | 419.8 / 444.9 | 60.8 / 64.8 |
+| 1 | 325.7 / 344.6 | 1217.5 / 1295.3 | 64.7 / 83.3 |
+| 2 | 181.1 / 190.6 | 681.9 / 742.3 | 38.8 / 46.4 |
+| 4 | 163.6 / 214.8 | 436.3 / 561.9 | 65.6 / 111.8 |
+
+Default kept. Small crops were faster with 2 threads here; a size-dependent
+thread policy is a possible later experiment (needs more cases and runs).
+
+### `preserve_indent` postprocess (accuracy only)
+
+Runtime, PP-OCRv6 small, `options.preserve_indent` off vs on, CER:
+
+| Case | off | on |
+| --- | ---: | ---: |
+| code-py-001 | 0.0741 | **0.0000** |
+| term-dark-001 | 0.0000 | 0.0000 |
+| screen-en-001 | 0.0632 | **1.4105** |
+| other EN/DARK/TINY/URL cases | unchanged | unchanged |
+
+Fixes code indentation; destroys scattered UI layouts. Therefore opt-in and
+documented as code/terminal-only.
+
 ---
 
 ## Pending measurements

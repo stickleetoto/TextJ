@@ -324,3 +324,14 @@ def test_close_fails_queued_jobs_and_rejects_new(png_path) -> None:
     assert codes == ["BACKEND_NOT_READY", "BACKEND_NOT_READY", "ok"]
     assert runtime.ocr(png_path)["error"]["code"] == "BACKEND_NOT_READY"
     assert runtime.state is RuntimeState.CLOSED
+
+
+def test_preserve_indent_option(make_runtime, png_path) -> None:
+    runtime = make_runtime()
+    response = runtime.handle(path_request(
+        png_path, options={"preserve_indent": True, "min_score": 0.0},
+    ))
+    # second fake line has no box -> not indented; first is the leftmost line
+    assert response["result"]["text"] == "안녕하세요 TextJ\nlow"
+    bad = runtime.handle(path_request(png_path, options={"preserve_indent": "yes"}))
+    assert bad["error"]["code"] == "INVALID_REQUEST"

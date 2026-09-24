@@ -97,6 +97,7 @@ URLs are **not** accepted as input.
 | `min_score` | number 0..1 | `0.5` | Lines with confidence below this are dropped. |
 | `include_boxes` | bool | `true` | Emit `box` per line. |
 | `include_timings` | bool | `true` | Emit `timings_ms`. |
+| `preserve_indent` | bool | `false` | Rebuild leading indentation in `text` from line box positions. Use for **code/terminal** (monospace) crops only; on scattered UI layouts it inserts large bogus indents. `lines[].text` is never modified. |
 
 ---
 

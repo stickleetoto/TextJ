@@ -43,7 +43,8 @@ Human CLI and clipboard paths are secondary adapters/debugging tools.
 - request envelope with strict validation, `request_id`, operations
   `ocr` / `ocr_batch` / `status`
 - inputs: `path`, `bytes_base64`, ndarray (Python API)
-- options: `mode`, `language`, `min_score`, `include_boxes`, `include_timings`
+- options: `mode`, `language`, `min_score`, `include_boxes`, `include_timings`,
+  `preserve_indent`
 - 13 stable error codes with `retryable` and `details`
 - limits (request bytes, image bytes/pixels/side, batch size, timeouts),
   checked from headers before full decode
@@ -84,7 +85,7 @@ Human CLI and clipboard paths are secondary adapters/debugging tools.
 
 ### Tests
 
-`pytest -q`: 96 tests, no model downloads (fake backends / injected engine).
+`pytest -q`: 99 tests, no model downloads (fake backends / injected engine).
 `pytest -m integration`: real OCR on fixtures with bundled PP-OCRv6 (8 pass);
 Korean cases run only with `TEXTJ_KOREAN_MODELS=1` (downloads models).
 
@@ -114,8 +115,8 @@ Linux 4-vCPU container, PP-OCRv6 small, English fixtures:
 - running inference cannot be cancelled; a timed-out request keeps its slot
   until the backend returns
 - line order is backend order; no layout reconstruction
-- recognition drops leading indentation and collapses repeated spaces
-  (code/terminal fidelity issue, see benchmark results)
+- recognition drops leading indentation (opt-in `preserve_indent` restores it
+  for monospace crops) and collapses repeated inner spaces
 - stdio transport handles requests sequentially (no pipelined concurrency)
 - no Windows named-pipe transport; TCP loopback is used on all platforms
 - no config file yet; configuration is CLI flags / `RuntimeConfig`

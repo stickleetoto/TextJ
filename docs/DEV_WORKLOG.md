@@ -4,6 +4,16 @@ Keep newest entries first.
 
 ---
 
+## 2026-09-24 — ORT threads experiment, preserve_indent option
+
+- measured `intra_op_num_threads` -1/1/2/4: default (-1) kept; 2 threads
+  faster on the 171×92 crop only (38.8 vs 60.8 ms p50)
+- added opt-in `options.preserve_indent` (protocol v1 additive field, MCP arg):
+  code-py-001 CER 0.0741 → 0.0000; screen-en-001 0.0632 → 1.4105 (so opt-in)
+- tests: 99 passed; integration (bundled models): 8 passed, 3 skipped (Korean)
+
+---
+
 ## 2026-09-24 — Protocol v1, resident runtime, transports, MCP, benchmarks
 
 ### State

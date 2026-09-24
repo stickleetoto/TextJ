@@ -8,6 +8,7 @@ from typing import Any, Mapping
 from textj.api.errors import TextJError
 from textj.api.request import PROTOCOL_VERSION, OCROptions
 from textj.models import OCRLine
+from textj.postprocess import indented_text
 
 SCORE_DIGITS = 6
 COORD_DIGITS = 2
@@ -61,11 +62,16 @@ def ocr_result_payload(
     """Build the ``result`` object of a successful ``ocr`` response.
 
     Line order is the backend's order (RapidOCR: top-to-bottom, then
-    left-to-right). ``text`` joins non-empty line texts with ``\\n``.
+    left-to-right). ``text`` joins non-empty line texts with ``\\n``; with
+    ``preserve_indent`` leading indentation is rebuilt from box geometry.
     """
     scores = [line.score for line in lines]
+    if options.preserve_indent:
+        text = indented_text(lines)
+    else:
+        text = "\n".join(line.text for line in lines if line.text)
     result: dict[str, Any] = {
-        "text": "\n".join(line.text for line in lines if line.text),
+        "text": text,
         "lines": [line_payload(line, options.include_boxes) for line in lines],
         "line_count": len(lines),
         "mean_score": round(sum(scores) / len(scores), SCORE_DIGITS) if scores else 0.0,

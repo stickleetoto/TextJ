@@ -62,6 +62,7 @@ class OCROptions:
     min_score: float = 0.5
     include_boxes: bool = True
     include_timings: bool = True
+    preserve_indent: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -211,7 +212,7 @@ def parse_options(value: Any) -> OCROptions:
         raise _invalid("options must be an object", field="options")
     _check_keys(
         value,
-        {"language", "mode", "min_score", "include_boxes", "include_timings"},
+        {"language", "mode", "min_score", "include_boxes", "include_timings", "preserve_indent"},
         "options",
     )
 
@@ -237,8 +238,10 @@ def parse_options(value: Any) -> OCROptions:
         )
 
     flags = {}
-    for name in ("include_boxes", "include_timings"):
-        flag = value.get(name, True)
+    for name, default in (
+        ("include_boxes", True), ("include_timings", True), ("preserve_indent", False),
+    ):
+        flag = value.get(name, default)
         if not isinstance(flag, bool):
             raise _invalid(f"options.{name} must be a boolean", field=f"options.{name}")
         flags[name] = flag
