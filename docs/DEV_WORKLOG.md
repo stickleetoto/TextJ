@@ -11,7 +11,7 @@ Keep newest entries first.
 - `--config` on `textj-serve` and `textj-mcp`; `examples/textj.toml`
 - `tomli` dependency only for Python < 3.11
 - verified: stdio server picks up profile/queue/batch limit from file
-- tests: 111 passed
+- tests: 112 passed
 
 ---
 

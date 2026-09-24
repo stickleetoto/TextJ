@@ -86,7 +86,7 @@ Human CLI and clipboard paths are secondary adapters/debugging tools.
 
 ### Tests
 
-`pytest -q`: 111 tests, no model downloads (fake backends / injected engine).
+`pytest -q`: 112 tests, no model downloads (fake backends / injected engine).
 `pytest -m integration`: real OCR on fixtures with bundled PP-OCRv6 (8 pass);
 Korean cases run only with `TEXTJ_KOREAN_MODELS=1` (downloads models).
 
