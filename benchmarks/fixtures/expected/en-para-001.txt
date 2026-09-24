@@ -1,0 +1,3 @@
+TextJ is a local OCR tool for AI agents.
+It returns text, confidence scores and boxes.
+Latency is measured from request to response.

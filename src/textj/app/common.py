@@ -4,6 +4,11 @@ import argparse
 
 from textj.backends.rapidocr_backend import DEFAULT_PROFILE, LANGUAGES, PROFILES
 
+# TextJ detector default: cap the longest side instead of RapidOCR's
+# upscaling "min 736" policy. Evidence: docs/BENCHMARK_RESULTS.md (2026-09-24).
+DEFAULT_DET_LIMIT_TYPE = "max"
+DEFAULT_DET_LIMIT_SIDE_LEN = 1280
+
 
 def add_model_arguments(parser: argparse.ArgumentParser) -> None:
     """Model/backend selection options shared by every TextJ command."""
@@ -25,14 +30,14 @@ def add_model_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--det-limit-type",
         choices=("min", "max"),
-        default=None,
-        help="Detector resize policy (default: backend default).",
+        default=DEFAULT_DET_LIMIT_TYPE,
+        help="Detector resize policy (default: %(default)s).",
     )
     parser.add_argument(
         "--det-limit-side-len",
         type=int,
-        default=None,
-        help="Detector resize side length in pixels (default: backend default).",
+        default=DEFAULT_DET_LIMIT_SIDE_LEN,
+        help="Detector resize side length in pixels (default: %(default)s).",
     )
 
 

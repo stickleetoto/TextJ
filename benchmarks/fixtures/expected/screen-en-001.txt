@@ -1,0 +1,6 @@
+File   Edit   View   Help
+Project settings
+Name: textj-runtime
+Max queue: 8
+Status: ready
+Apply

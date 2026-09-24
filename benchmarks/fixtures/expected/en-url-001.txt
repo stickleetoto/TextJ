@@ -1,0 +1,2 @@
+https://example.com/docs/api/v1?lang=en&page=2
+C:/Users/agent/Documents/report_2026-09.pdf

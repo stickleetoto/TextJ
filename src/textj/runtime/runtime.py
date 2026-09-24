@@ -84,8 +84,10 @@ class RuntimeState(str, Enum):
 class RuntimeConfig:
     language: str = "korean"
     profile: str = DEFAULT_PROFILE
-    det_limit_type: str | None = None
-    det_limit_side_len: int | None = None
+    # Cap the detector's longest side (RapidOCR's own default upscales the
+    # short side to 736 px). Evidence: docs/BENCHMARK_RESULTS.md.
+    det_limit_type: str | None = "max"
+    det_limit_side_len: int | None = 1280
     max_inflight: int = 1
     max_queue: int = 8
     warmup: bool = True

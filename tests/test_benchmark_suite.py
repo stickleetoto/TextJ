@@ -65,3 +65,19 @@ def test_suite_calculates_cer(tmp_path: Path) -> None:
     assert result.mean_cer == 0.0
     assert result.cases[0].cer == 0.0
     assert result.cases[0].recognized_text == "안녕하세요 TextJ"
+
+
+def test_suite_tag_filter(tmp_path: Path) -> None:
+    import pytest
+
+    (tmp_path / "image.png").write_bytes(b"fake")
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(json.dumps({"cases": [
+        {"id": "ko", "image": "image.png", "tags": ["KO"]},
+        {"id": "en", "image": "image.png", "tags": ["EN", "UI"]},
+    ]}), encoding="utf-8")
+
+    result = run_suite(OCRPipeline(FakeBackend()), manifest, runs=1, warmups=0, tags=("UI",))
+    assert [case.case.case_id for case in result.cases] == ["en"]
+    with pytest.raises(ValueError):
+        run_suite(OCRPipeline(FakeBackend()), manifest, runs=1, warmups=0, tags=("XX",))

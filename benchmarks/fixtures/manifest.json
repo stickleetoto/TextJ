@@ -1,0 +1,111 @@
+{
+  "cases": [
+    {
+      "id": "en-ui-001",
+      "image": "images/en-ui-001.png",
+      "expected": "expected/en-ui-001.txt",
+      "tags": [
+        "EN",
+        "UI",
+        "S"
+      ]
+    },
+    {
+      "id": "en-para-001",
+      "image": "images/en-para-001.png",
+      "expected": "expected/en-para-001.txt",
+      "tags": [
+        "EN",
+        "M"
+      ]
+    },
+    {
+      "id": "en-url-001",
+      "image": "images/en-url-001.png",
+      "expected": "expected/en-url-001.txt",
+      "tags": [
+        "EN",
+        "URL",
+        "S"
+      ]
+    },
+    {
+      "id": "code-py-001",
+      "image": "images/code-py-001.png",
+      "expected": "expected/code-py-001.txt",
+      "tags": [
+        "CODE",
+        "M"
+      ]
+    },
+    {
+      "id": "term-dark-001",
+      "image": "images/term-dark-001.png",
+      "expected": "expected/term-dark-001.txt",
+      "tags": [
+        "TERM",
+        "DARK",
+        "M"
+      ]
+    },
+    {
+      "id": "dark-ui-001",
+      "image": "images/dark-ui-001.png",
+      "expected": "expected/dark-ui-001.txt",
+      "tags": [
+        "DARK",
+        "UI",
+        "S"
+      ]
+    },
+    {
+      "id": "tiny-en-001",
+      "image": "images/tiny-en-001.png",
+      "expected": "expected/tiny-en-001.txt",
+      "tags": [
+        "TINY",
+        "EN",
+        "S"
+      ]
+    },
+    {
+      "id": "screen-en-001",
+      "image": "images/screen-en-001.png",
+      "expected": "expected/screen-en-001.txt",
+      "tags": [
+        "EN",
+        "UI",
+        "L"
+      ]
+    },
+    {
+      "id": "ko-ui-001",
+      "image": "images/ko-ui-001.png",
+      "expected": "expected/ko-ui-001.txt",
+      "tags": [
+        "KO",
+        "UI",
+        "S"
+      ]
+    },
+    {
+      "id": "ko-para-001",
+      "image": "images/ko-para-001.png",
+      "expected": "expected/ko-para-001.txt",
+      "tags": [
+        "KO",
+        "M"
+      ]
+    },
+    {
+      "id": "mix-ui-001",
+      "image": "images/mix-ui-001.png",
+      "expected": "expected/mix-ui-001.txt",
+      "tags": [
+        "MIX",
+        "UI",
+        "M"
+      ]
+    }
+  ]
+}

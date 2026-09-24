@@ -23,6 +23,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--runs", type=int, default=10, help="Measured runs per case.")
     parser.add_argument("--warmups", type=int, default=1, help="Warmups per case.")
     add_backend_arguments(parser)
+    parser.add_argument(
+        "--tags",
+        help="Comma-separated tags; run only cases having at least one of them.",
+    )
     parser.add_argument("--output", type=Path, help="Optional JSON result path.")
     parser.add_argument("--json", action="store_true", help="Print JSON to stdout.")
     return parser
@@ -51,6 +55,7 @@ def main(argv: list[str] | None = None) -> int:
             args.manifest,
             runs=args.runs,
             warmups=args.warmups,
+            tags=tuple(t.strip() for t in args.tags.split(",") if t.strip()) if args.tags else (),
         )
     except (FileNotFoundError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -73,6 +78,7 @@ def main(argv: list[str] | None = None) -> int:
         "min_score": args.min_score,
         "runs": args.runs,
         "warmups": args.warmups,
+        "tags": args.tags,
     }
 
     if args.output is not None:

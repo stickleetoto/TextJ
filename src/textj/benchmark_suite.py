@@ -117,9 +117,15 @@ def run_suite(
     *,
     runs: int = 10,
     warmups: int = 1,
+    tags: tuple[str, ...] = (),
 ) -> SuiteResult:
     manifest = Path(manifest_path).resolve()
     cases = load_manifest(manifest)
+    if tags:
+        wanted = set(tags)
+        cases = tuple(case for case in cases if wanted & set(case.tags))
+        if not cases:
+            raise ValueError(f"no benchmark cases match tags: {', '.join(tags)}")
     results: list[CaseResult] = []
 
     for case in cases:
