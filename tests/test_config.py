@@ -71,3 +71,9 @@ def test_serve_main_reports_config_errors(tmp_path: Path, capsys) -> None:
 
     assert main(["--config", str(write(tmp_path, "[x]\n"))]) == 2
     assert "unknown top-level" in capsys.readouterr().err
+
+
+def test_example_config_is_valid() -> None:
+    example = Path(__file__).resolve().parents[1] / "examples" / "textj.toml"
+    config = load_config(example)
+    assert config["runtime"]["language"] == "korean"
