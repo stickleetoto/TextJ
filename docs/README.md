@@ -22,6 +22,7 @@ Its primary job is to accept image input from an AI agent or automated pipeline 
 | --- | --- |
 | [PERFORMANCE.md](PERFORMANCE.md) | Request-to-response performance policy |
 | [BENCHMARK_MATRIX.md](BENCHMARK_MATRIX.md) | Workloads and benchmark dimensions |
+| [BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md) | Measured results with configuration |
 | [OCR_ENGINE.md](OCR_ENGINE.md) | OCR backend strategy |
 | [OPTIMIZATION.md](OPTIMIZATION.md) | Optimization ideas and constraints |
 | [TECH_STACK.md](TECH_STACK.md) | Runtime and technology candidates |

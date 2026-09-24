@@ -16,7 +16,7 @@ TextJ is an AI/tooling component, not primarily a desktop OCR app.
 
 # v0.1 — OCR Core
 
-**Status: implementation present; real-device validation pending.**
+**Status: implemented; English validated on Linux; Korean and Windows validation pending.**
 
 Goal: obtain useful Korean/English OCR through a backend-independent core.
 
@@ -40,7 +40,7 @@ Exit:
 
 # v0.2 — Benchmark Foundation
 
-**Status: IN PROGRESS.**
+**Status: implemented (runner, suite, comparator, runtime bench, synthetic fixtures). HARD/XL fixtures pending.**
 
 Goal: make latency, accuracy, and memory measurable.
 
@@ -64,6 +64,9 @@ Exit:
 
 # v0.3 — Protocol v1
 
+**Status: implemented 2026-09-24 — see `docs/AI_TOOL_PROTOCOL.md`.**
+
+
 Goal: define a stable machine-facing contract.
 
 Deliverables:
@@ -85,6 +88,9 @@ Exit:
 ---
 
 # v0.4 — Resident Runtime
+
+**Status: implemented 2026-09-24 (`textj.runtime.TextJRuntime`).**
+
 
 Goal: remove model construction from each call.
 
@@ -108,6 +114,9 @@ Exit:
 
 # v0.5 — Local Tool API
 
+**Status: implemented 2026-09-24 (stdio, loopback TCP daemon, client). Named pipe not implemented.**
+
+
 Goal: expose the resident runtime to external agents.
 
 Deliverables:
@@ -128,6 +137,9 @@ Exit:
 ---
 
 # v0.6 — Batch and Concurrency
+
+**Status: implemented 2026-09-24; burst measured on Linux only. MCP adapter (`textj-mcp`) also implemented.**
+
 
 Goal: support real agent workloads.
 

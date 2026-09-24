@@ -2,208 +2,89 @@
 
 This is the active queue for autonomous development.
 
-TextJ is an **AI-facing OCR tool/service**.
+TextJ is an **AI-facing OCR tool/service**. Do not prioritize human desktop UI.
 
-Do not prioritize human desktop UI.
+Checkboxes are honest: `[x]` = implemented and tested; `[~]` = partially done
+(see note); `[ ]` = open. Blocked items say why.
 
 ---
 
 # Phase A — Stabilize Existing Core
 
-- [ ] clean install
-- [ ] run `pytest -q`
-- [ ] fix packaging/import failures
-- [ ] validate file OCR
-- [ ] validate ndarray OCR
-- [ ] validate Korean
-- [ ] validate English
-- [ ] validate mixed Korean/English
-- [ ] record real warm p50/p95
-- [ ] record first known OCR failures
-
-Exit: existing OCR path is trustworthy enough to become a service.
-
----
-
-# Phase B — Finish Benchmark Foundation
-
-## B1. Improve artifact metadata
-
-- [ ] TextJ version
-- [ ] git commit when available
-- [ ] image dimensions
-- [ ] backend model config
-- [ ] provider
-- [ ] cold construction
-- [ ] warm service latency
-
-## B2. Regression comparator
-
-Implement benchmark JSON comparison.
-
-Report separately:
-
-- p50 delta
-- p95 delta
-- CER delta
-- RSS delta
-
-- [ ] console output
-- [ ] JSON output
-- [ ] configurable fail thresholds
-- [ ] tests
-
-## B3. Safe fixture corpus
-
-- [ ] KO
-- [ ] EN
-- [ ] MIX
-- [ ] CODE
-- [ ] TERM
-- [ ] UI
-- [ ] DARK
-- [ ] TINY
-
-Exit: performance/accuracy changes are evidence-based.
+- [x] clean install (`pip install -e ".[dev]"`, Linux, Python 3.11)
+- [x] run `pytest -q`
+- [x] fix packaging/import failures (none found)
+- [x] fix real-backend crash: `elapse_list` contains `None` for skipped classifier
+- [x] validate file OCR (English, PP-OCRv6 small)
+- [x] validate ndarray OCR
+- [ ] validate Korean — **blocked**: PP-OCRv5 Korean model host unreachable from sandbox
+- [x] validate English
+- [ ] validate mixed Korean/English — **blocked** (same)
+- [x] record real warm p50/p95 (English, Linux; `docs/BENCHMARK_RESULTS.md`)
+- [x] record first known OCR failures (indentation, repeated spaces, `AI`→`Al`)
+- [ ] validate on target Windows machine — **blocked**: no Windows here
 
 ---
 
-# Phase C — Protocol v1
+# Phase B — Benchmark Foundation
 
-This is now higher priority than desktop UX.
+## B1. Artifact metadata
 
-## C1. Internal request/response types
+- [x] TextJ version
+- [x] git commit when available
+- [x] image dimensions
+- [x] backend model config
+- [x] provider (onnxruntime providers + package versions)
+- [x] cold construction (`backend_construct_ms`, runtime `startup_ms`)
+- [x] warm service latency (`textj-bench-runtime`)
 
-Create backend-independent types.
+## B2. Regression comparator (`textj-bench-compare`)
 
-Need:
+- [x] console output
+- [x] JSON output
+- [x] configurable fail thresholds (p50 %, p95 %, CER abs, RSS MB)
+- [x] tests
 
-- [ ] protocol_version
-- [ ] request_id
-- [ ] operation
-- [ ] image input descriptor
-- [ ] OCR options
-- [ ] success response
-- [ ] error response
+## B3. Safe fixture corpus (`benchmarks/fixtures/`)
 
-## C2. Stable error codes
-
-Implement and test:
-
-- [ ] INVALID_REQUEST
-- [ ] UNSUPPORTED_PROTOCOL
-- [ ] UNSUPPORTED_OPERATION
-- [ ] IMAGE_NOT_FOUND
-- [ ] IMAGE_DECODE_FAILED
-- [ ] UNSUPPORTED_IMAGE
-- [ ] REQUEST_TOO_LARGE
-- [ ] BACKEND_NOT_READY
-- [ ] BUSY
-- [ ] TIMEOUT
-- [ ] OCR_FAILED
-- [ ] INTERNAL_ERROR
-
-## C3. Input limits
-
-Define:
-
-- [ ] max bytes
-- [ ] max pixels
-- [ ] max dimensions
-- [ ] max batch size
-- [ ] timeout bounds
-
-Reject early.
-
-## C4. Serialization
-
-- [ ] deterministic JSON
-- [ ] Unicode-safe
-- [ ] optional boxes
-- [ ] optional timings
-- [ ] tests for backward stability
-
-Exit: protocol v1 draft is usable independently of transport.
+- [x] KO (generated; unmeasured — blocked)
+- [x] EN
+- [x] MIX (generated; unmeasured — blocked)
+- [x] CODE
+- [x] TERM
+- [x] UI
+- [x] DARK
+- [x] TINY
+- [ ] HARD (low contrast, blur, JPEG artifacts)
+- [ ] XL (1440p/4K screenshots)
 
 ---
 
-# Phase D — Resident Runtime
+# Phase C — Protocol v1  ✅
 
-## D1. TextJRuntime
-
-Own:
-
-- backend
-- warmup
-- readiness
-- queue
-- concurrency
-- timeouts
-- shutdown
-
-- [ ] fake-backend lifecycle tests
-- [ ] backend initialization once
-- [ ] repeated OCR calls
-- [ ] failure state
-- [ ] clean close
-
-## D2. Bounded scheduling
-
-Start conservative.
-
-Suggested initial policy:
-
-- max in-flight OCR = 1
-- bounded queue
-
-Then benchmark.
-
-- [ ] queue wait timing
-- [ ] BUSY behavior
-- [ ] timeout behavior
-- [ ] cancellation where practical
-
-Exit: repeated requests do not reconstruct the model and overload is bounded.
+- [x] C1 request/response types (`textj.api`)
+- [x] C2 stable error codes (13, frozen by test)
+- [x] C3 input limits, rejected before decode
+- [x] C4 deterministic, Unicode-safe serialization; optional boxes/timings;
+      schema stability tests
 
 ---
 
-# Phase E — Machine-facing Transports
+# Phase D — Resident Runtime  ✅
 
-## E1. Python API
+- [x] D1 `TextJRuntime`: backend once, warmup, readiness, failure state, clean close
+- [x] D2 bounded scheduling: queue wait timing, `BUSY`, `TIMEOUT`,
+      cancellation of queued work on timeout/close
 
-Expose a stable high-level API without requiring CLI parsing.
+---
 
-## E2. JSON stdio reference
+# Phase E — Machine-facing Transports  ✅
 
-Useful for agents that spawn TextJ as a subprocess.
-
-Requirements:
-
-- one JSON request per frame/message
-- one JSON response
-- no debug logs on stdout
-- stderr reserved for diagnostics
-
-## E3. Local daemon
-
-Choose simplest local transport first.
-
-Candidates:
-
-- named pipe
-- Unix domain socket
-- loopback TCP
-
-Requirements:
-
-- local-only by default
-- health/status
-- protocol version
-- request IDs
-- timeouts
-- graceful shutdown
-
-Exit: an external process can repeatedly call warm TextJ.
+- [x] E1 Python API (`TextJRuntime.ocr/handle/handle_json`)
+- [x] E2 JSON stdio (`textj-serve --stdio`)
+- [x] E3 local daemon: loopback TCP, token auth, status, graceful shutdown,
+      client + `textj-client`
+- [ ] E4 Windows named pipe transport (only if TCP loopback proves inadequate)
 
 ---
 
@@ -211,104 +92,88 @@ Exit: an external process can repeatedly call warm TextJ.
 
 ## F1. OCR batch
 
-- [ ] stable item IDs
-- [ ] preserve order
-- [ ] per-item error
-- [ ] batch limits
-- [ ] no all-or-nothing failure unless required
+- [x] stable item IDs
+- [x] preserve order
+- [x] per-item error
+- [x] batch limits
+- [x] no all-or-nothing failure
 
-## F2. Concurrency stress
+## F2. Concurrency stress (fake backends)
 
-Test:
-
-- [ ] parallel clients
-- [ ] queue full
-- [ ] slow request
-- [ ] malformed request
-- [ ] timeout
-- [ ] backend exception
-- [ ] daemon shutdown during requests
+- [x] parallel clients
+- [x] queue full → BUSY
+- [x] slow request / timeout
+- [x] malformed request
+- [x] backend exception
+- [x] shutdown during requests
 
 ## F3. Throughput vs latency
 
-Record both.
-
-Do not maximize throughput by destroying p95 latency.
-
-Exit: TextJ behaves predictably under agent bursts.
+- [x] measured on Linux 4 vCPU: `max_inflight=1` best (see results)
+- [ ] re-measure on target Windows hardware
 
 ---
 
-# Phase G — MCP Adapter
+# Phase G — MCP Adapter  ✅
 
-Build only after runtime/protocol are stable enough.
-
-MCP should be thin.
-
-Suggested tools:
-
-- `ocr_image`
-- `ocr_batch`
-- `textj_status`
-
-Requirements:
-
-- [ ] map MCP args to protocol request
-- [ ] return structured results
-- [ ] reuse resident runtime
-- [ ] no model lifecycle duplication
-- [ ] tool descriptions optimized for AI callers
-
-Exit: MCP clients can use TextJ directly.
+- [x] map MCP args to protocol request
+- [x] structured results (`structuredContent` + JSON text)
+- [x] reuse resident runtime (in-process or `--daemon`)
+- [x] no model lifecycle duplication
+- [x] AI-oriented tool descriptions
+- [ ] validate with a real MCP client (Claude Desktop / Claude Code config)
 
 ---
 
-# Phase H — Fast Pipeline Optimization
+# Phase H — Fast Pipeline Optimization  (next)
 
-Use benchmarks.
+Every change must report p50/p95/CER (use `textj-bench-compare`).
 
-Potential work:
-
-- detector resolution sweep
-- image copy reduction
-- decode fast paths
-- crop filtering
-- crop bucketing
-- recognition batching
-- provider tuning
-- INT8/FP16 experiments
-- direct bytes decoding
-- shared memory experiment
-
-Every performance change must report accuracy impact.
+- [x] detector resolution policy: `max 1280` default (measured)
+- [ ] large screenshot sweep (1440p/4K) for `det_limit_side_len`
+- [ ] detection dominates 1280×720 (~80%): try `det_limit_side_len` 960 on
+      large inputs only, `box_thresh`/`unclip_ratio`, dilation off
+- [ ] ONNX Runtime thread settings (`intra_op_num_threads`) vs latency and burst
+- [ ] recognizer batch size (`rec_batch_num`) vs latency
+- [ ] code/terminal fidelity: preserve indentation / repeated spaces from box
+      geometry (postprocess), fixture-driven
+- [ ] crop filtering / tiny-noise suppression
+- [ ] INT8/FP16 experiments
+- [ ] shared-memory input experiment (only if decode/transport shows up in profiles;
+      currently ≤ 5 ms)
 
 ---
 
 # Phase I — Reliability and Packaging
 
-- [ ] headless service packaging
-- [ ] deterministic config
-- [ ] model cache/offline behavior
-- [ ] startup readiness
-- [ ] local logging
-- [ ] crash recovery
-- [ ] version command
-- [ ] protocol compatibility tests
+- [ ] headless service packaging (PyInstaller / Nuitka evaluation)
+- [ ] deterministic config file (TOML) for runtime + limits
+- [ ] model cache/offline behavior: document + `textj-models` prefetch command
+- [x] startup readiness (`status.state`, `BACKEND_NOT_READY`)
+- [ ] local logging to file (currently stderr)
+- [ ] crash recovery / supervisor guidance
+- [x] version command (`textj --version`, `status.textj_version`)
+- [x] protocol compatibility tests (shape + error code freeze)
 - [ ] clean uninstall/update story
 
-Exit: TextJ can be deployed as local AI infrastructure.
+---
+
+# Next concrete tasks (in order)
+
+1. On a networked machine: run KO/MIX fixtures with `ppocrv5-mobile`, add to
+   `docs/BENCHMARK_RESULTS.md`, confirm `max 1280` does not hurt Korean CER.
+2. Add HARD and XL fixtures; sweep `det_limit_side_len` for large screenshots.
+3. ORT thread-count experiment (`intra_op_num_threads`) for single-request
+   latency and burst behavior.
+4. Indentation/space-preserving postprocess for CODE/TERM fixtures (opt-in
+   option, measured).
+5. TOML config for `textj-serve` / `textj-mcp`.
+6. Packaging evaluation.
 
 ---
 
 # Deprioritized / Optional
 
-Do not pull these into the main path unless specifically requested:
-
-- tray icon
-- global hotkey
-- drag-selection overlay
-- clipboard-centric UX
-- human history UI
-- desktop settings UI
-
-Existing clipboard code may remain as a useful adapter/test utility.
+- tray icon, global hotkey, drag-selection overlay
+- clipboard-centric UX (existing clipboard code remains as a debug adapter)
+- human history UI, desktop settings UI

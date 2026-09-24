@@ -39,22 +39,9 @@ AI Agent
 
 ## Current status
 
-**OCR core exists. Benchmark foundation is in progress. AI protocol + resident runtime are next.**
-
-Current implementation includes:
-
-- RapidOCR / PP-OCRv5 baseline
-- Korean/English-capable OCR path
-- file input
-- in-memory ndarray input
-- text / confidence / boxes
-- JSON output
-- latency benchmarks
-- p50/p95
-- CER
-- sampled RSS
-- benchmark suites
-- an older clipboard adapter useful for manual tests
+**Protocol v1, the resident runtime, stdio/daemon transports and an MCP adapter are implemented.**
+Real-model validation so far: English on Linux (see [benchmark results](docs/BENCHMARK_RESULTS.md)).
+Korean model validation and Windows validation are pending. Details: [STATUS](docs/STATUS.md).
 
 ## Install
 
@@ -65,55 +52,71 @@ python -m pip install -U pip
 pip install -e ".[dev]"
 ```
 
-## Current debug CLI
+The default profile `ppocrv5-mobile` downloads its Korean/English models on first
+start (network needed once). `--profile ppocrv6-small --language en` uses models
+bundled with rapidocr and works fully offline, but has no Korean.
 
-```powershell
-textj screenshot.png --json
-textj-bench screenshot.png --runs 20 --warmups 2
-textj-bench-suite benchmarks/manifest.json --runs 10 --warmups 1
+## Use from an agent
+
+### Python API
+
+```python
+from textj import RuntimeConfig, TextJRuntime
+
+runtime = TextJRuntime(RuntimeConfig(language="korean")).start()   # loads + warms once
+response = runtime.ocr("frame.png")                  # or ndarray (BGR) / encoded bytes
+if response["ok"]:
+    print(response["result"]["text"])
+else:
+    print(response["error"]["code"])                 # stable machine-readable code
+runtime.close()
 ```
 
-These commands are development/debug interfaces.
+### JSON stdio (long-lived subprocess)
 
-The intended v1 interface is machine-facing and long-lived.
+```bash
+textj-serve --stdio
+# stdin, one JSON object per line:
+{"protocol_version":"1","request_id":"r1","operation":"ocr","input":{"type":"path","path":"/abs/frame.png"}}
+# stdout, one response per line:
+{"protocol_version":"1","request_id":"r1","ok":true,"result":{"text":"...","lines":[...],"timings_ms":{...}}}
+```
 
-## Planned machine-facing request
+### Local daemon
 
-Conceptually:
+```bash
+textj-serve --tcp            # loopback only; writes host/port/token to ~/.textj/daemon.json
+textj-client status
+textj-client ocr frame.png
+textj-client ocr a.png b.png c.png     # ocr_batch
+```
+
+```python
+from textj.transport.client import TextJClient
+with TextJClient.from_state_file() as client:
+    response = client.ocr_path("frame.png")
+```
+
+### MCP
 
 ```json
-{
-  "protocol_version": "1",
-  "request_id": "req-1",
-  "operation": "ocr",
-  "input": {
-    "type": "path",
-    "path": "frame.png"
-  },
-  "options": {
-    "language": "korean",
-    "include_boxes": true
-  }
-}
+{"mcpServers": {"textj": {"command": "textj-mcp"}}}
 ```
 
-Response:
+Tools: `ocr_image`, `ocr_batch`, `textj_status`. Add `"args": ["--daemon"]` to
+share an already running `textj-serve --tcp` runtime.
 
-```json
-{
-  "protocol_version": "1",
-  "request_id": "req-1",
-  "ok": true,
-  "result": {
-    "text": "recognized text",
-    "lines": [],
-    "backend": "rapidocr-onnx",
-    "timings_ms": {}
-  }
-}
+Full request/response/error spec: [AI Tool Protocol v1](docs/AI_TOOL_PROTOCOL.md).
+
+## Benchmark / debug commands
+
+```bash
+textj image.png --json                                   # one-shot (loads model each run)
+textj-bench image.png --runs 20 --warmups 2
+textj-bench-suite benchmarks/fixtures/manifest.json --runs 10 --warmups 1 --output base.json
+textj-bench-compare base.json new.json --max-p95-regression-pct 10 --max-cer-increase 0.005
+textj-bench-runtime image.png --runs 20                  # API/JSON/TCP latency + burst
 ```
-
-See [AI Tool Protocol](docs/AI_TOOL_PROTOCOL.md).
 
 ## Project goals
 
@@ -156,6 +159,7 @@ These are optional or lower priority:
 - [Roadmap](docs/ROADMAP.md)
 - [Performance](docs/PERFORMANCE.md)
 - [Benchmark matrix](docs/BENCHMARK_MATRIX.md)
+- [Benchmark results](docs/BENCHMARK_RESULTS.md)
 - [OCR engine](docs/OCR_ENGINE.md)
 - [Optimization](docs/OPTIMIZATION.md)
 - [Technology radar](docs/TECH_RADAR.md)

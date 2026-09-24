@@ -51,11 +51,13 @@ def collect_system_info() -> dict[str, Any]:
         info["onnxruntime"] = None
         info["onnxruntime_providers"] = []
 
-    try:
-        import rapidocr
+    # rapidocr has no __version__ attribute; use installed distribution metadata.
+    from importlib.metadata import PackageNotFoundError, version
 
-        info["rapidocr"] = getattr(rapidocr, "__version__", None)
-    except Exception:
-        info["rapidocr"] = None
+    for dist in ("rapidocr", "numpy", "opencv-python", "Pillow"):
+        try:
+            info[dist.lower()] = version(dist)
+        except PackageNotFoundError:
+            info[dist.lower()] = None
 
     return info

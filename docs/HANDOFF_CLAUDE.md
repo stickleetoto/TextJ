@@ -31,42 +31,28 @@ Human CLI/clipboard functions are retained as debugging/adapters, not the center
 
 ## Current implementation
 
-Baseline before this direction rewrite:
+As of 2026-09-24 (see `docs/STATUS.md` for the authoritative list):
 
-`3f5352d5561cd7458528e1780ce87e12e88fce95`
+- OCR core + RapidOCR backend (profiles `ppocrv5-mobile`, `ppocrv6-small`)
+- protocol v1 (`src/textj/api/`), spec in `docs/AI_TOOL_PROTOCOL.md`
+- resident `TextJRuntime` (`src/textj/runtime/`) with bounded queue, BUSY,
+  TIMEOUT, batch, status
+- transports: `textj-serve --stdio|--tcp`, `TextJClient`, `textj-client`
+- MCP adapter `textj-mcp`
+- benchmarks: suite, comparator, runtime bench, synthetic fixtures;
+  measured numbers in `docs/BENCHMARK_RESULTS.md`
+- clipboard code kept as a debug adapter
 
-Already implemented:
-
-- Python package
-- backend abstraction
-- RapidOCR
-- PP-OCRv5 mobile baseline
-- Korean recognition
-- ONNX Runtime CPU
-- file input
-- ndarray input
-- text / score / boxes
-- JSON output
-- benchmark runner
-- p50/p95
-- CER
-- sampled RSS
-- benchmark suite
-- clipboard image prototype
-- Win32 clipboard output
-
-The clipboard path is no longer a product priority, but useful code should not be deleted just because the priority changed.
-
----
+Blocked in the cloud sandbox: Korean model download (modelscope/HF denied),
+Windows validation. Use `--profile ppocrv6-small --language en` for offline
+English runs.
 
 ## First job
 
 1. read `CLAUDE.md`
-2. run tests
-3. inspect current code for breakage
-4. update any remaining desktop-centric assumptions encountered
-5. begin `docs/EXECUTION_PLAN.md` from Phase A
-6. move quickly toward Protocol v1 and Resident Runtime
+2. `pip install -e ".[dev]"` and `pytest -q`
+3. read "Next concrete tasks" in `docs/EXECUTION_PLAN.md` and continue there
+4. keep every interface on the shared `TextJRuntime` + protocol v1 path
 
 ---
 

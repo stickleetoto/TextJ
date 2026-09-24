@@ -61,3 +61,4 @@ def test_system_info_has_version() -> None:
     info = collect_system_info()
     assert info["textj_version"] == __version__
     assert "git_commit" in info
+    assert info["rapidocr"]
