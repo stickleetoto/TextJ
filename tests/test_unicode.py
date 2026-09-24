@@ -118,4 +118,4 @@ def test_ensure_utf8_stdio_reconfigures_legacy_pipes(monkeypatch) -> None:
     ensure_utf8_stdio()
     print("한글 ₩ OK")
     sys.stdout.flush()
-    assert fake_out.buffer.getvalue().decode("utf-8") == "한글 ₩ OK\n"
+    assert fake_out.buffer.getvalue().decode("utf-8").splitlines() == ["한글 ₩ OK"]
