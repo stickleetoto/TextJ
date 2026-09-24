@@ -44,6 +44,9 @@ textj-bench = "textj.app.bench:main"
 textj-bench-suite = "textj.app.bench_suite:main"
 textj-bench-compare = "textj.app.bench_compare:main"
 textj-clipboard = "textj.app.clipboard:main"
+textj-serve = "textj.app.serve:main"
+textj-client = "textj.app.client:main"
+textj-mcp = "textj.adapters.mcp_server:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

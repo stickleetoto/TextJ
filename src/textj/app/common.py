@@ -5,8 +5,8 @@ import argparse
 from textj.backends.rapidocr_backend import DEFAULT_PROFILE, LANGUAGES, PROFILES
 
 
-def add_backend_arguments(parser: argparse.ArgumentParser) -> None:
-    """Backend selection options shared by every TextJ command."""
+def add_model_arguments(parser: argparse.ArgumentParser) -> None:
+    """Model/backend selection options shared by every TextJ command."""
     parser.add_argument(
         "--language",
         choices=LANGUAGES,
@@ -23,12 +23,6 @@ def add_backend_arguments(parser: argparse.ArgumentParser) -> None:
         ),
     )
     parser.add_argument(
-        "--min-score",
-        type=float,
-        default=0.5,
-        help="Minimum OCR confidence (default: 0.5).",
-    )
-    parser.add_argument(
         "--det-limit-type",
         choices=("min", "max"),
         default=None,
@@ -39,6 +33,17 @@ def add_backend_arguments(parser: argparse.ArgumentParser) -> None:
         type=int,
         default=None,
         help="Detector resize side length in pixels (default: backend default).",
+    )
+
+
+def add_backend_arguments(parser: argparse.ArgumentParser) -> None:
+    """Model options plus the minimum score used by one-shot commands."""
+    add_model_arguments(parser)
+    parser.add_argument(
+        "--min-score",
+        type=float,
+        default=0.5,
+        help="Minimum OCR confidence (default: 0.5).",
     )
 
 

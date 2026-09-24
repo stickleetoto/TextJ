@@ -24,6 +24,7 @@ Scheduling model
 
 from __future__ import annotations
 
+import io
 import json
 import logging
 import threading
@@ -134,10 +135,15 @@ class _Job:
     parse_ms: float | None
 
 
-def _warmup_image() -> np.ndarray:
-    image = np.full((48, 192, 3), 255, dtype=np.uint8)
-    image[16:32, 16:176] = 0
-    return image
+def _warmup_input() -> ImageInput:
+    """Encoded PNG with text, so warmup also initializes the decode path."""
+    from PIL import Image, ImageDraw
+
+    image = Image.new("RGB", (192, 48), "white")
+    ImageDraw.Draw(image).text((12, 14), "TextJ warmup 123", fill="black")
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return ImageInput.from_bytes(buffer.getvalue())
 
 
 class TextJRuntime:
@@ -199,7 +205,7 @@ class TextJRuntime:
                 self._backends.append(backend)
                 if self.config.warmup:
                     started = perf_counter()
-                    backend.recognize(_warmup_image())
+                    backend.recognize(load_image(_warmup_input(), self.config.limits).array)
                     warmup_ms.append((perf_counter() - started) * 1000.0)
         except Exception as exc:
             log.exception("backend startup failed")
@@ -292,13 +298,13 @@ class TextJRuntime:
                 "request exceeds max_request_bytes",
                 details={"max_request_bytes": self.config.limits.max_request_bytes},
             )
-            self._record_error(error)
+            self.record_error(error)
             return encode_json(error_envelope(None, error))
         try:
             payload = json.loads(raw)
         except (ValueError, UnicodeDecodeError) as exc:
             error = TextJError(ErrorCode.INVALID_REQUEST, f"request is not valid JSON: {exc}")
-            self._record_error(error)
+            self.record_error(error)
             return encode_json(error_envelope(None, error))
         return encode_json(self.handle(payload, received_at=received))
 
@@ -309,12 +315,12 @@ class TextJRuntime:
         try:
             request = parse_request(payload, self.config.limits)
         except TextJError as error:
-            self._record_error(error)
+            self.record_error(error)
             return error_envelope(request_id, error)
         except Exception as exc:  # defensive: parsing must never crash a transport
             log.exception("request parsing failed")
             error = TextJError(ErrorCode.INTERNAL_ERROR, f"internal error: {type(exc).__name__}")
-            self._record_error(error)
+            self.record_error(error)
             return error_envelope(request_id, error)
 
         parse_ms = (perf_counter() - received) * 1000.0
@@ -344,7 +350,7 @@ class TextJRuntime:
         try:
             parsed_options = parse_options(options) if options else OCROptions()
         except TextJError as error:
-            self._record_error(error)
+            self.record_error(error)
             return error_envelope(rid, error)
         request = OCRRequest(
             request_id=rid,
@@ -397,12 +403,12 @@ class TextJRuntime:
                     details={"timeout_ms": timeout_ms},
                 )
         except TextJError as error:
-            self._record_error(error)
+            self.record_error(error)
             return error_envelope(request.request_id, error)
         except Exception as exc:
             log.exception("request execution failed")
             error = TextJError(ErrorCode.INTERNAL_ERROR, f"internal error: {type(exc).__name__}")
-            self._record_error(error)
+            self.record_error(error)
             return error_envelope(request.request_id, error)
 
         with self._cond:
@@ -509,7 +515,7 @@ class TextJRuntime:
             details={"state": state.value, "failure": self._failure},
         )
 
-    def _record_error(self, error: TextJError) -> None:
+    def record_error(self, error: TextJError) -> None:
         with self._cond:
             self._counters["requests"] += 1
             self._counters["errors"] += 1
