@@ -18,6 +18,7 @@ import numpy as np
 
 from textj.api.errors import ErrorCode, TextJError
 from textj.api.limits import Limits
+from textj.languages import REQUEST_LANGUAGES
 
 PROTOCOL_VERSION = "1"
 
@@ -217,8 +218,12 @@ def parse_options(value: Any) -> OCROptions:
     )
 
     language = value.get("language")
-    if language is not None and not isinstance(language, str):
-        raise _invalid("options.language must be a string", field="options.language")
+    if language is not None and language not in REQUEST_LANGUAGES:
+        raise _invalid(
+            f"options.language must be one of {list(REQUEST_LANGUAGES)}",
+            field="options.language",
+            supported=list(REQUEST_LANGUAGES),
+        )
 
     mode = value.get("mode", "fast")
     if mode not in MODES:

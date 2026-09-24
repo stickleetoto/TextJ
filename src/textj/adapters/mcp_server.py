@@ -294,7 +294,7 @@ def _rpc_error(msg_id: Any, code: int, message: str) -> dict[str, Any]:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    from textj.app.common import add_model_arguments
+    from textj.app.common import add_model_arguments, add_model_store_arguments
 
     parser = argparse.ArgumentParser(
         prog="textj-mcp",
@@ -307,6 +307,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--state-file", help="Daemon state file for --daemon.")
     parser.add_argument("--config", help="TOML config file (see textj.config); flags override it.")
     add_model_arguments(parser)
+    add_model_store_arguments(parser)
     parser.add_argument("--max-inflight", type=int, default=1)
     parser.add_argument("--max-queue", type=int, default=8)
     parser.add_argument("--no-warmup", action="store_true")
@@ -345,6 +346,8 @@ def main(argv: list[str] | None = None) -> int:
             max_inflight=args.max_inflight,
             max_queue=args.max_queue,
             warmup=not args.no_warmup,
+            model_download="never" if args.offline else "missing",
+            model_dir=args.model_dir,
             limits=limits,
         ))
         try:

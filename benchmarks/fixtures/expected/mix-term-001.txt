@@ -1,0 +1,2 @@
+$ textj-client ocr 스크린샷.png
+오류: IMAGE_NOT_FOUND (재시도 불가)

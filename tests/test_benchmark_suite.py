@@ -81,3 +81,21 @@ def test_suite_tag_filter(tmp_path: Path) -> None:
     assert [case.case.case_id for case in result.cases] == ["en"]
     with pytest.raises(ValueError):
         run_suite(OCRPipeline(FakeBackend()), manifest, runs=1, warmups=0, tags=("XX",))
+
+
+def test_suite_by_tag_aggregates(tmp_path: Path) -> None:
+    (tmp_path / "image.png").write_bytes(b"fake")
+    (tmp_path / "good.txt").write_text("안녕하세요 TextJ", encoding="utf-8")
+    (tmp_path / "bad.txt").write_text("완전히 다른 문장", encoding="utf-8")
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(json.dumps({"cases": [
+        {"id": "ko", "image": "image.png", "expected": "bad.txt", "tags": ["KO"]},
+        {"id": "mix", "image": "image.png", "expected": "good.txt", "tags": ["MIX", "UI"]},
+    ]}), encoding="utf-8")
+
+    payload = run_suite(OCRPipeline(FakeBackend()), manifest, runs=1, warmups=0).to_dict()
+
+    assert set(payload["by_tag"]) == {"KO", "MIX", "UI"}
+    assert payload["by_tag"]["MIX"]["mean_cer"] == 0.0
+    assert payload["by_tag"]["KO"]["mean_cer"] > 0.5
+    assert payload["by_tag"]["KO"]["case_count"] == 1

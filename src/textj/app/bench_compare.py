@@ -27,6 +27,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    from textj.app.common import ensure_utf8_stdio
+
+    ensure_utf8_stdio()
     args = build_parser().parse_args(argv)
     try:
         baseline = json.loads(args.baseline.read_text(encoding="utf-8"))

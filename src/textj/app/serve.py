@@ -10,7 +10,7 @@ import threading
 
 from textj.api.errors import TextJError
 from textj.api.limits import Limits
-from textj.app.common import add_model_arguments
+from textj.app.common import add_model_arguments, add_model_store_arguments
 from textj.config import ConfigError, parser_defaults, preparse_config
 from textj.runtime import RuntimeConfig, TextJRuntime
 
@@ -29,6 +29,7 @@ def build_parser() -> argparse.ArgumentParser:
     mode.add_argument("--tcp", action="store_true", help="Serve on loopback TCP (default).")
     parser.add_argument("--config", help="TOML config file (see textj.config); flags override it.")
     add_model_arguments(parser)
+    add_model_store_arguments(parser)
     parser.add_argument("--max-inflight", type=int, default=1,
                         help="Concurrent OCR executions; one backend each (default: 1).")
     parser.add_argument("--max-queue", type=int, default=8,
@@ -52,6 +53,8 @@ def runtime_config(args: argparse.Namespace, limits: Limits | None = None) -> Ru
         max_inflight=args.max_inflight,
         max_queue=args.max_queue,
         warmup=not args.no_warmup,
+        model_download="never" if args.offline else "missing",
+        model_dir=args.model_dir,
         limits=limits or Limits(),
     )
 

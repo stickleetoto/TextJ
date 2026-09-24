@@ -106,6 +106,98 @@
         "UI",
         "M"
       ]
+    },
+    {
+      "id": "ko-num-001",
+      "image": "images/ko-num-001.png",
+      "expected": "expected/ko-num-001.txt",
+      "tags": [
+        "KO",
+        "NUM",
+        "M"
+      ]
+    },
+    {
+      "id": "ko-punct-001",
+      "image": "images/ko-punct-001.png",
+      "expected": "expected/ko-punct-001.txt",
+      "tags": [
+        "KO",
+        "PUNCT",
+        "M"
+      ]
+    },
+    {
+      "id": "ko-dark-001",
+      "image": "images/ko-dark-001.png",
+      "expected": "expected/ko-dark-001.txt",
+      "tags": [
+        "KO",
+        "DARK",
+        "UI",
+        "S"
+      ]
+    },
+    {
+      "id": "mix-tech-001",
+      "image": "images/mix-tech-001.png",
+      "expected": "expected/mix-tech-001.txt",
+      "tags": [
+        "MIX",
+        "TECH",
+        "M"
+      ]
+    },
+    {
+      "id": "mix-path-001",
+      "image": "images/mix-path-001.png",
+      "expected": "expected/mix-path-001.txt",
+      "tags": [
+        "MIX",
+        "PATH",
+        "M"
+      ]
+    },
+    {
+      "id": "mix-url-001",
+      "image": "images/mix-url-001.png",
+      "expected": "expected/mix-url-001.txt",
+      "tags": [
+        "MIX",
+        "URL",
+        "M"
+      ]
+    },
+    {
+      "id": "mix-lib-001",
+      "image": "images/mix-lib-001.png",
+      "expected": "expected/mix-lib-001.txt",
+      "tags": [
+        "MIX",
+        "TECH",
+        "M"
+      ]
+    },
+    {
+      "id": "mix-num-001",
+      "image": "images/mix-num-001.png",
+      "expected": "expected/mix-num-001.txt",
+      "tags": [
+        "MIX",
+        "NUM",
+        "M"
+      ]
+    },
+    {
+      "id": "mix-term-001",
+      "image": "images/mix-term-001.png",
+      "expected": "expected/mix-term-001.txt",
+      "tags": [
+        "MIX",
+        "TERM",
+        "DARK",
+        "M"
+      ]
     }
   ]
 }

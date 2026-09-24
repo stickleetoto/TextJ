@@ -29,6 +29,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    from textj.app.common import ensure_utf8_stdio
+
+    ensure_utf8_stdio()
     args = build_parser().parse_args(argv)
     options = {}
     if getattr(args, "min_score", None) is not None:

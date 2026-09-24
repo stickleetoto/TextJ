@@ -61,6 +61,22 @@ class SuiteResult:
             return 0.0
         return fmean(case.summary.p95_ms for case in self.cases)
 
+    def by_tag(self) -> dict[str, dict[str, Any]]:
+        """Aggregates per tag (e.g. EN / KO / MIX) so languages are reported separately."""
+        tags = sorted({tag for case in self.cases for tag in case.case.tags})
+        result: dict[str, dict[str, Any]] = {}
+        for tag in tags:
+            cases = [case for case in self.cases if tag in case.case.tags]
+            cers = [case.cer for case in cases if case.cer is not None]
+            result[tag] = {
+                "case_count": len(cases),
+                "mean_p50_ms": round(fmean(c.summary.p50_ms for c in cases), 3),
+                "mean_p95_ms": round(fmean(c.summary.p95_ms for c in cases), 3),
+                "mean_cer": round(fmean(cers), 6) if cers else None,
+                "max_sampled_rss_mb": round(max(c.summary.sampled_peak_rss_mb for c in cases), 3),
+            }
+        return result
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "manifest": str(self.manifest),
@@ -68,6 +84,7 @@ class SuiteResult:
             "mean_cer": round(self.mean_cer, 6) if self.mean_cer is not None else None,
             "mean_p50_ms": round(self.mean_p50_ms, 3),
             "mean_p95_ms": round(self.mean_p95_ms, 3),
+            "by_tag": self.by_tag(),
             "cases": [case.to_dict() for case in self.cases],
         }
 

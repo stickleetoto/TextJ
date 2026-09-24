@@ -1,0 +1,2 @@
+PyTorch 2.4와 ONNX Runtime 1.20을 설치합니다
+모델: PP-OCRv5 mobile, 백엔드: RapidOCR

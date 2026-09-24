@@ -93,26 +93,98 @@ CASES = (
         "오류 코드 IMAGE_NOT_FOUND 발생",
         "다운로드 속도 12.5 MB/s",
     ), "korean", 20),
+    Case("ko-num-001", ("KO", "NUM", "M"), (
+        "2026년 9월 24일 오후 3시 15분",
+        "총 1,234개 중 987개 완료 (80.0%)",
+    ), "korean", 22),
+    Case("ko-punct-001", ("KO", "PUNCT", "M"), (
+        "정말요? 네, 맞습니다!",
+        "\"확인\" 버튼을 누르세요. (필수)",
+    ), "korean", 22),
+    Case("ko-dark-001", ("KO", "DARK", "UI", "S"), (
+        "알림 설정",
+        "자동 업데이트 사용",
+    ), "korean", 22, fg=(235, 235, 235), bg=(40, 44, 52)),
+    Case("mix-tech-001", ("MIX", "TECH", "M"), (
+        "설정에서 CUDA provider를 활성화하세요",
+        "TextJ 서버 상태: READY",
+    ), "korean", 22),
+    Case("mix-path-001", ("MIX", "PATH", "M"), (
+        "파일을 C:\\Users\\test\\model.onnx 에 저장했습니다",
+        "로그 위치: /var/log/textj/server.log",
+    ), "korean", 20),
+    Case("mix-url-001", ("MIX", "URL", "M"), (
+        "문서: https://example.com/docs/ko/v1",
+        "자세한 내용은 github.com/example/textj 참고",
+    ), "korean", 20),
+    Case("mix-lib-001", ("MIX", "TECH", "M"), (
+        "PyTorch 2.4와 ONNX Runtime 1.20을 설치합니다",
+        "모델: PP-OCRv5 mobile, 백엔드: RapidOCR",
+    ), "korean", 20),
+    Case("mix-num-001", ("MIX", "NUM", "M"), (
+        "응답 시간 p95 = 168.9 ms",
+        "메모리 268 MB, 요청 40건 성공",
+    ), "korean", 22),
+    Case("mix-term-001", ("MIX", "TERM", "DARK", "M"), (
+        "$ textj-client ocr 스크린샷.png",
+        "오류: IMAGE_NOT_FOUND (재시도 불가)",
+    ), "korean", 18, fg=(210, 210, 210), bg=(30, 30, 30)),
 )
+
+
+# Korean fonts such as NanumGothic draw U+005C (backslash) as the Won sign.
+# These characters are drawn with the sans font so pixels match ground truth.
+FALLBACK_CHARS = {"\\"}
+
+
+def _segments(line: str) -> list[tuple[str, bool]]:
+    """Split a line into (text, use_fallback) runs."""
+    runs: list[tuple[str, bool]] = []
+    for char in line:
+        fallback = char in FALLBACK_CHARS
+        if runs and runs[-1][1] == fallback:
+            runs[-1] = (runs[-1][0] + char, fallback)
+        else:
+            runs.append((char, fallback))
+    return runs
+
+
+def _draw_line(draw, xy, line, font, fallback_font, fill) -> None:
+    x, y = xy
+    for text, use_fallback in _segments(line):
+        run_font = fallback_font if use_fallback and fallback_font is not None else font
+        draw.text((x, y), text, font=run_font, fill=fill)
+        x += draw.textlength(text, font=run_font)
+
+
+def _line_width(draw, line, font, fallback_font) -> float:
+    return sum(
+        draw.textlength(text, font=fallback_font if fb and fallback_font is not None else font)
+        for text, fb in _segments(line)
+    )
 
 
 def render(case: Case, fonts: dict[str, Path]) -> Image.Image:
     font = ImageFont.truetype(str(fonts[case.font]), case.size)
+    fallback = (
+        ImageFont.truetype(str(fonts["sans"]), case.size) if case.font == "korean" else None
+    )
     if case.canvas is not None:
         image = Image.new("RGB", case.canvas, case.bg)
         draw = ImageDraw.Draw(image)
         for line, position in zip(case.lines, case.positions, strict=True):
-            draw.text(position, line, font=font, fill=case.fg)
+            _draw_line(draw, position, line, font, fallback, case.fg)
         return image
     probe = ImageDraw.Draw(Image.new("RGB", (1, 1)))
-    widths = [probe.textlength(line, font=font) for line in case.lines]
+    widths = [_line_width(probe, line, font, fallback) for line in case.lines]
     line_height = int(case.size * case.spacing)
     width = int(max(widths)) + 2 * case.padding
     height = line_height * len(case.lines) + 2 * case.padding
     image = Image.new("RGB", (width, height), case.bg)
     draw = ImageDraw.Draw(image)
     for index, line in enumerate(case.lines):
-        draw.text((case.padding, case.padding + index * line_height), line, font=font, fill=case.fg)
+        _draw_line(draw, (case.padding, case.padding + index * line_height), line, font,
+                   fallback, case.fg)
     return image
 
 

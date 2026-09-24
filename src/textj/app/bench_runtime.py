@@ -25,7 +25,7 @@ from statistics import fmean
 from time import perf_counter
 from typing import Any, Callable
 
-from textj.app.common import add_model_arguments
+from textj.app.common import add_model_arguments, add_model_store_arguments
 from textj.benchmark import percentile
 from textj.result_io import write_json
 from textj.system_info import collect_system_info
@@ -67,6 +67,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="textj-bench-runtime", description=__doc__.split("\n")[0])
     parser.add_argument("image", type=Path)
     add_model_arguments(parser)
+    add_model_store_arguments(parser)
     parser.add_argument("--runs", type=int, default=20)
     parser.add_argument("--warmups", type=int, default=2)
     parser.add_argument("--max-inflight", type=int, default=1)
@@ -79,6 +80,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    from textj.app.common import ensure_utf8_stdio
+
+    ensure_utf8_stdio()
     args = build_parser().parse_args(argv)
     from textj.runtime import RuntimeConfig, TextJRuntime
     from textj.transport.client import TextJClient
@@ -97,6 +101,8 @@ def main(argv: list[str] | None = None) -> int:
         det_limit_side_len=args.det_limit_side_len,
         max_inflight=args.max_inflight,
         max_queue=args.max_queue,
+        model_download="never" if args.offline else "missing",
+        model_dir=args.model_dir,
     )
     runtime = TextJRuntime(config)
     started = perf_counter()

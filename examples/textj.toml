@@ -4,13 +4,15 @@
 config_version = 1
 
 [runtime]
-language = "korean"
+language = "ko-en"
 profile = "ppocrv5-mobile"
 det_limit_type = "max"
 det_limit_side_len = 1280
 max_inflight = 1
 max_queue = 8
 warmup = true
+model_download = "missing"   # or "never" (offline)
+# model_dir = "D:/textj-models"
 
 [limits]
 max_request_bytes = 67108864

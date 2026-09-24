@@ -1,0 +1,2 @@
+문서: https://example.com/docs/ko/v1
+자세한 내용은 github.com/example/textj 참고

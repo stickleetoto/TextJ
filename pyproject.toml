@@ -49,6 +49,7 @@ textj-clipboard = "textj.app.clipboard:main"
 textj-serve = "textj.app.serve:main"
 textj-client = "textj.app.client:main"
 textj-mcp = "textj.adapters.mcp_server:main"
+textj-models = "textj.app.models:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

@@ -5,13 +5,15 @@ Example (all keys optional)::
     config_version = 1
 
     [runtime]
-    language = "korean"
+    language = "ko-en"
     profile = "ppocrv5-mobile"
     det_limit_type = "max"
     det_limit_side_len = 1280
     max_inflight = 1
     max_queue = 8
     warmup = true
+    model_download = "missing"   # or "never" (offline)
+    # model_dir = "D:/textj-models"
 
     [limits]
     max_request_bytes = 67108864
@@ -57,6 +59,8 @@ RUNTIME_KEYS = {
     "max_inflight": int,
     "max_queue": int,
     "warmup": bool,
+    "model_download": str,
+    "model_dir": str,
 }
 SERVER_KEYS = {
     "host": str,
@@ -122,6 +126,8 @@ def parser_defaults(config: Mapping[str, Mapping[str, Any]]) -> dict[str, Any]:
     for key, value in runtime.items():
         if key == "warmup":
             defaults["no_warmup"] = not value
+        elif key == "model_download":
+            defaults["offline"] = value == "never"
         else:
             defaults[key] = value
     server = config.get("server", {})

@@ -76,4 +76,4 @@ def test_serve_main_reports_config_errors(tmp_path: Path, capsys) -> None:
 def test_example_config_is_valid() -> None:
     example = Path(__file__).resolve().parents[1] / "examples" / "textj.toml"
     config = load_config(example)
-    assert config["runtime"]["language"] == "korean"
+    assert config["runtime"]["language"] == "ko-en"

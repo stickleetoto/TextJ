@@ -63,7 +63,9 @@ from textj.api.response import (
     success_envelope,
 )
 from textj.backends.base import OCRBackend
-from textj.backends.rapidocr_backend import DEFAULT_PROFILE
+from textj.backends.rapidocr_backend import DEFAULT_LANGUAGE, DEFAULT_PROFILE
+from textj.languages import COVERAGE, normalize_runtime_language, serves
+from textj.model_store import ModelError
 from textj.benchmark import percentile
 
 log = logging.getLogger("textj.runtime")
@@ -82,7 +84,7 @@ class RuntimeState(str, Enum):
 
 @dataclass(frozen=True, slots=True)
 class RuntimeConfig:
-    language: str = "korean"
+    language: str = DEFAULT_LANGUAGE
     profile: str = DEFAULT_PROFILE
     # Cap the detector's longest side (RapidOCR's own default upscales the
     # short side to 736 px). Evidence: docs/BENCHMARK_RESULTS.md.
@@ -94,9 +96,15 @@ class RuntimeConfig:
     # Extra time a caller waits past the deadline for a batch to return the
     # items finished so far.
     batch_grace_ms: int = 2_000
+    # "missing": fetch absent model files once at start; "never": offline.
+    model_download: str = "missing"
+    model_dir: str | None = None
     limits: Limits = field(default_factory=Limits)
 
     def __post_init__(self) -> None:
+        object.__setattr__(self, "language", normalize_runtime_language(self.language))
+        if self.model_download not in ("missing", "never"):
+            raise ValueError("model_download must be 'missing' or 'never'")
         if self.max_inflight < 1:
             raise ValueError("max_inflight must be at least 1")
         if self.max_queue < 0:
@@ -122,6 +130,8 @@ def rapidocr_factory(config: RuntimeConfig) -> BackendFactory:
             profile=config.profile,
             det_limit_type=config.det_limit_type,
             det_limit_side_len=config.det_limit_side_len,
+            model_download=config.model_download,
+            model_dir=config.model_dir,
         )
 
     return build
@@ -165,6 +175,7 @@ class TextJRuntime:
         self._inflight = 0
         self._state = RuntimeState.CREATED
         self._failure: str | None = None
+        self._failure_reason: str | None = None
         self._workers: list[threading.Thread] = []
         self._backends: list[OCRBackend] = []
         self._started_at: float | None = None
@@ -210,15 +221,21 @@ class TextJRuntime:
                     backend.recognize(load_image(_warmup_input(), self.config.limits).array)
                     warmup_ms.append((perf_counter() - started) * 1000.0)
         except Exception as exc:
-            log.exception("backend startup failed")
+            if isinstance(exc, ModelError):
+                log.error("backend startup failed: %s", exc)
+            else:
+                log.exception("backend startup failed")
             with self._cond:
                 self._state = RuntimeState.FAILED
                 self._failure = f"{type(exc).__name__}: {exc}"
+                self._failure_reason = "MODEL_MISSING" if isinstance(exc, ModelError) else None
             self._close_backends()
+            details = {"reason": "MODEL_MISSING"} if isinstance(exc, ModelError) else None
             raise TextJError(
                 ErrorCode.BACKEND_NOT_READY,
                 f"OCR backend failed to start: {exc}",
                 retryable=False,
+                details=details,
             ) from exc
 
         self._startup = {
@@ -466,11 +483,16 @@ class TextJRuntime:
     # ------------------------------------------------------------------ internals
 
     def _validate_options(self, options: OCROptions) -> None:
-        if options.language is not None and options.language != self.config.language:
+        if not serves(self.config.language, options.language):
             raise TextJError(
                 ErrorCode.INVALID_REQUEST,
-                f"language {options.language!r} is not loaded in this runtime",
-                details={"field": "options.language", "supported": [self.config.language]},
+                f"language {options.language!r} is not served by this runtime "
+                f"(loaded: {self.config.language})",
+                details={
+                    "field": "options.language",
+                    "loaded": self.config.language,
+                    "supported": ["auto", *sorted(COVERAGE[self.config.language])],
+                },
             )
 
     def _admit(self, job: _Job) -> None:
@@ -514,7 +536,11 @@ class TextJRuntime:
             ErrorCode.BACKEND_NOT_READY,
             f"runtime is {state.value}",
             retryable=False,
-            details={"state": state.value, "failure": self._failure},
+            details={
+                "state": state.value,
+                "failure": self._failure,
+                **({"reason": self._failure_reason} if self._failure_reason else {}),
+            },
         )
 
     def record_error(self, error: TextJError) -> None:

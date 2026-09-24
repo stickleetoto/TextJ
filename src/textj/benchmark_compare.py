@@ -103,7 +103,15 @@ def extract_metrics(
             metrics = _single_metrics(case.get("benchmark") or {})
             metrics["cer"] = _number(case.get("cer"))
             cases[str(case.get("id"))] = metrics
-        rss_values = [m["rss_mb"] for m in cases.values() if m["rss_mb"] is not None]
+        rss_values = [m["rss_mb"] for k, m in cases.items()
+                      if m["rss_mb"] is not None and not k.startswith("tag:")]
+        for tag, agg in (payload.get("by_tag") or {}).items():
+            cases[f"tag:{tag}"] = {
+                "p50_ms": _number(agg.get("mean_p50_ms")),
+                "p95_ms": _number(agg.get("mean_p95_ms")),
+                "cer": _number(agg.get("mean_cer")),
+                "rss_mb": _number(agg.get("max_sampled_rss_mb")),
+            }
         aggregate = {
             "p50_ms": _number(payload.get("mean_p50_ms")),
             "p95_ms": _number(payload.get("mean_p95_ms")),
@@ -155,12 +163,13 @@ def compare(
     add("aggregate", base_agg, cand_agg)
     for case_id in base_cases:
         if case_id in cand_cases:
-            add(f"case:{case_id}", base_cases[case_id], cand_cases[case_id])
+            scope = case_id if case_id.startswith("tag:") else f"case:{case_id}"
+            add(scope, base_cases[case_id], cand_cases[case_id])
 
     return Comparison(
         deltas=tuple(deltas),
-        missing_cases=tuple(c for c in base_cases if c not in cand_cases),
-        new_cases=tuple(c for c in cand_cases if c not in base_cases),
+        missing_cases=tuple(c for c in base_cases if c not in cand_cases and not c.startswith("tag:")),
+        new_cases=tuple(c for c in cand_cases if c not in base_cases and not c.startswith("tag:")),
     )
 
 

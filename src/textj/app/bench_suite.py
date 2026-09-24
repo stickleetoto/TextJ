@@ -33,6 +33,9 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    from textj.app.common import ensure_utf8_stdio
+
+    ensure_utf8_stdio()
     args = build_parser().parse_args(argv)
 
     if args.runs < 1:
@@ -95,6 +98,12 @@ def main(argv: list[str] | None = None) -> int:
     print(f"  mean p95:           {payload['mean_p95_ms']:.3f} ms")
     if payload["mean_cer"] is not None:
         print(f"  mean CER:           {payload['mean_cer']:.4f}")
+    for tag in ("EN", "KO", "MIX"):
+        agg = payload["by_tag"].get(tag)
+        if agg:
+            cer = f"{agg['mean_cer']:.4f}" if agg["mean_cer"] is not None else "-"
+            print(f"  {tag:<4} ({agg['case_count']:>2} cases)   p50 {agg['mean_p50_ms']:8.1f}  "
+                  f"p95 {agg['mean_p95_ms']:8.1f} ms  CER {cer}  RSS {agg['max_sampled_rss_mb']:.1f} MB")
     if args.output is not None:
         print(f"  result:             {args.output}")
     return 0

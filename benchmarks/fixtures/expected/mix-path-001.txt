@@ -1,0 +1,2 @@
+파일을 C:\Users\test\model.onnx 에 저장했습니다
+로그 위치: /var/log/textj/server.log

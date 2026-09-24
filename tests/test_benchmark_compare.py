@@ -90,3 +90,14 @@ def test_cli_json_output(tmp_path: Path, capsys) -> None:
     payload = json.loads(capsys.readouterr().out)
     assert payload["failed"] is False
     assert payload["deltas"][0]["metric"] == "p50_ms"
+
+
+def test_suite_tag_scopes_are_compared() -> None:
+    base = suite({"a": (10, 12, 0.0)})
+    cand = suite({"a": (10, 12, 0.3)})
+    base["by_tag"] = {"KO": {"mean_p50_ms": 10, "mean_p95_ms": 12, "mean_cer": 0.0, "max_sampled_rss_mb": 100}}
+    cand["by_tag"] = {"KO": {"mean_p50_ms": 10, "mean_p95_ms": 12, "mean_cer": 0.3, "max_sampled_rss_mb": 100}}
+    result = compare(base, cand, Thresholds(max_cer_increase=0.01))
+    failed = {d.scope for d in result.deltas if d.failed}
+    assert "tag:KO" in failed
+    assert result.missing_cases == () and result.new_cases == ()

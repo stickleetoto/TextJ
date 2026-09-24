@@ -1,0 +1,2 @@
+설정에서 CUDA provider를 활성화하세요
+TextJ 서버 상태: READY

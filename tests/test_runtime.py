@@ -72,12 +72,43 @@ def test_options_min_score_boxes_timings(make_runtime, png_path) -> None:
     assert "timings_ms" not in result
 
 
-def test_language_mismatch_is_invalid_request(make_runtime, png_path) -> None:
-    runtime = make_runtime(language="korean")
-    response = runtime.handle(path_request(png_path, options={"language": "en"}))
+def test_language_policy(make_runtime, png_path) -> None:
+    ko_en = make_runtime(language="korean")  # alias of ko-en
+    assert ko_en.config.language == "ko-en"
+    for language in ("auto", "ko-en", "korean", "en"):
+        assert ko_en.handle(path_request(png_path, options={"language": language}))["ok"], language
+
+    en = make_runtime(language="en")
+    assert en.handle(path_request(png_path, options={"language": "en"}))["ok"]
+    response = en.handle(path_request(png_path, options={"language": "ko-en"}))
     assert response["error"]["code"] == "INVALID_REQUEST"
-    assert response["error"]["details"]["supported"] == ["korean"]
-    assert runtime.handle(path_request(png_path, options={"language": "korean"}))["ok"]
+    assert response["error"]["details"]["loaded"] == "en"
+    assert response["error"]["details"]["supported"] == ["auto", "en"]
+
+    unknown = ko_en.handle(path_request(png_path, options={"language": "ja"}))
+    assert unknown["error"]["code"] == "INVALID_REQUEST"
+
+
+def test_runtime_rejects_unknown_language() -> None:
+    with pytest.raises(ValueError):
+        RuntimeConfig(language="ch")
+
+
+def test_missing_model_reports_reason() -> None:
+    from textj.model_store import ModelError
+
+    def missing():
+        raise ModelError("model file(s) not available: korean_PP-OCRv5_rec_mobile.onnx")
+
+    runtime = TextJRuntime(RuntimeConfig(), backend_factory=missing)
+    with pytest.raises(TextJError) as info:
+        runtime.start()
+    assert info.value.code is ErrorCode.BACKEND_NOT_READY
+    assert info.value.details == {"reason": "MODEL_MISSING"}
+    assert "korean_PP-OCRv5_rec_mobile.onnx" in runtime.status()["failure"]
+    later = runtime.ocr(png_bytes())
+    assert later["error"]["code"] == "BACKEND_NOT_READY"
+    assert later["error"]["details"]["reason"] == "MODEL_MISSING"
 
 
 def test_python_api_accepts_ndarray_bytes_and_path(make_runtime, png_path) -> None:

@@ -1,54 +1,64 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from textj.backends.base import BackendResult, OCRBackend
 from textj.image_types import OCRInput
+from textj.languages import COVERAGE, RUNTIME_LANGUAGES, normalize_runtime_language
+from textj.model_store import PROFILE_MODELS, _stderr_log, resolve
 from textj.models import Box, OCRLine
 
-# Model profiles map a stable TextJ name to RapidOCR model selection.
+# Model profiles (see textj.model_store.PROFILE_MODELS for exact files):
 #
-# ppocrv5-mobile: PP-OCRv5 mobile detector + language-specific PP-OCRv5 mobile
-#   recognizer. Required for Korean. Models are downloaded by RapidOCR on first
-#   use (network access to RapidOCR's model host is required once).
-# ppocrv6-small: PP-OCRv6 small multilingual detector/recognizer bundled inside
-#   the rapidocr wheel. Works fully offline, but has no Hangul in its
-#   dictionary, so it is only suitable for English/Latin/Chinese text.
+# ppocrv5-mobile: PP-OCRv5 mobile detector + PP-OCRv5 mobile recognizer for
+#   the chosen language (ko-en -> korean_PP-OCRv5_rec_mobile, en ->
+#   en_PP-OCRv5_rec_mobile). Files are fetched once into the TextJ model cache.
+# ppocrv6-small: PP-OCRv6 small multilingual models bundled inside the
+#   rapidocr wheel. Fully offline, but no Hangul: English only.
 PROFILES = ("ppocrv5-mobile", "ppocrv6-small")
 DEFAULT_PROFILE = "ppocrv5-mobile"
-LANGUAGES = ("korean", "en", "ch")
+LANGUAGES = RUNTIME_LANGUAGES
+DEFAULT_LANGUAGE = "ko-en"
 
 
 class RapidOCRBackend(OCRBackend):
-    """RapidOCR backend on ONNX Runtime."""
+    """RapidOCR backend on ONNX Runtime with TextJ-resolved model files."""
 
     name = "rapidocr-onnx"
 
     def __init__(
         self,
         *,
-        language: str = "korean",
+        language: str = DEFAULT_LANGUAGE,
         text_score: float = 0.5,
         profile: str = DEFAULT_PROFILE,
         log_level: str = "warning",
         det_limit_type: str | None = None,
         det_limit_side_len: int | None = None,
+        model_download: str = "missing",
+        model_dir: str | Path | None = None,
         engine: Any = None,
     ) -> None:
-        if language not in LANGUAGES:
-            raise ValueError(f"Unsupported RapidOCR language: {language}")
+        language = normalize_runtime_language(language)
         if profile not in PROFILES:
             raise ValueError(f"Unsupported RapidOCR profile: {profile}")
-
-        self.language = language
-        self.text_score = text_score
-        self.profile = profile
         if det_limit_type not in (None, "min", "max"):
             raise ValueError(f"Unsupported det_limit_type: {det_limit_type}")
         if det_limit_side_len is not None and det_limit_side_len < 32:
             raise ValueError("det_limit_side_len must be at least 32")
+        if (profile, language) not in PROFILE_MODELS:
+            raise ValueError(
+                f"Profile {profile!r} does not support language {language!r}"
+                + (" (no Hangul); use profile 'ppocrv5-mobile'" if language == "ko-en" else "")
+            )
+
+        self.language = language
+        self.text_score = text_score
+        self.profile = profile
         self.det_limit_type = det_limit_type
         self.det_limit_side_len = det_limit_side_len
+        self.model_files: dict[str, str] = {}
 
         if engine is not None:
             # Injected engine: used by tests to exercise result conversion.
@@ -56,47 +66,43 @@ class RapidOCRBackend(OCRBackend):
             return
 
         try:
-            from rapidocr import (
-                EngineType,
-                LangDet,
-                LangRec,
-                ModelType,
-                OCRVersion,
-                RapidOCR,
-            )
+            from rapidocr import EngineType, LangDet, LangRec, ModelType, OCRVersion, RapidOCR
         except ImportError as exc:
             raise RuntimeError(
                 "RapidOCR backend is unavailable. "
                 "Install TextJ dependencies with: pip install -e ."
             ) from exc
 
+        # TextJ resolves and verifies model files itself, so RapidOCR never
+        # downloads anything and OCR requests never touch the network.
+        det_path, rec_path = resolve(
+            profile,
+            language,
+            download=model_download,
+            cache_dir=Path(model_dir) if model_dir is not None else None,
+            log=_stderr_log,
+        )
+        self.model_files = {"det": det_path.name, "rec": rec_path.name}
+
         params: dict[str, Any] = {
             "Global.text_score": text_score,
             "Global.log_level": log_level,
+            "Global.use_cls": False,
             "Det.engine_type": EngineType.ONNXRUNTIME,
             "Rec.engine_type": EngineType.ONNXRUNTIME,
+            "Det.model_path": str(det_path),
+            "Rec.model_path": str(rec_path),
         }
-
         if profile == "ppocrv5-mobile":
-            lang_map = {
-                "korean": LangRec.KOREAN,
-                "en": LangRec.EN,
-                "ch": LangRec.CH,
-            }
             params.update({
                 "Det.lang_type": LangDet.CH,
                 "Det.model_type": ModelType.MOBILE,
                 "Det.ocr_version": OCRVersion.PPOCRV5,
-                "Rec.lang_type": lang_map[language],
+                "Rec.lang_type": LangRec.KOREAN if language == "ko-en" else LangRec.EN,
                 "Rec.model_type": ModelType.MOBILE,
                 "Rec.ocr_version": OCRVersion.PPOCRV5,
             })
         else:
-            if language == "korean":
-                raise ValueError(
-                    "Profile 'ppocrv6-small' has no Korean recognizer; "
-                    "use profile 'ppocrv5-mobile' for Korean."
-                )
             params.update({
                 "Det.model_type": ModelType.SMALL,
                 "Det.ocr_version": OCRVersion.PPOCRV6,
@@ -118,6 +124,8 @@ class RapidOCRBackend(OCRBackend):
             "name": self.name,
             "profile": self.profile,
             "language": self.language,
+            "languages_served": sorted(COVERAGE[self.language]),
+            "model_files": dict(self.model_files),
             "text_score": self.text_score,
             "det_limit_type": self.det_limit_type,
             "det_limit_side_len": self.det_limit_side_len,
