@@ -149,7 +149,8 @@ Every change must report p50/p95/CER (use `textj-bench-compare`).
 # Phase I — Reliability and Packaging
 
 - [ ] headless service packaging (PyInstaller / Nuitka evaluation)
-- [ ] deterministic config file (TOML) for runtime + limits
+- [x] deterministic config file (TOML) for runtime + limits + server
+      (`--config`, strict keys, flags override; `examples/textj.toml`)
 - [ ] model cache/offline behavior: document + `textj-models` prefetch command
 - [x] startup readiness (`status.state`, `BACKEND_NOT_READY`)
 - [ ] local logging to file (currently stderr)
@@ -166,9 +167,9 @@ Every change must report p50/p95/CER (use `textj-bench-compare`).
    `docs/BENCHMARK_RESULTS.md`, confirm `max 1280` does not hurt Korean CER.
 2. Add HARD and XL fixtures; sweep `det_limit_side_len` for large screenshots.
 3. Size-dependent ORT thread policy experiment (2 threads helped tiny crops).
-4. TOML config for `textj-serve` / `textj-mcp` (runtime config + limits).
-5. Model prefetch/offline command and cache documentation.
-6. Packaging evaluation.
+4. Model prefetch/offline command and cache documentation.
+5. Packaging evaluation (PyInstaller vs Nuitka: size, cold start, idle RSS).
+6. Validate `textj-mcp` with a real MCP client config.
 
 ---
 

@@ -9,7 +9,9 @@ import sys
 import threading
 
 from textj.api.errors import TextJError
+from textj.api.limits import Limits
 from textj.app.common import add_model_arguments
+from textj.config import ConfigError, parser_defaults, preparse_config
 from textj.runtime import RuntimeConfig, TextJRuntime
 
 
@@ -25,6 +27,7 @@ def build_parser() -> argparse.ArgumentParser:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--stdio", action="store_true", help="Serve on stdin/stdout.")
     mode.add_argument("--tcp", action="store_true", help="Serve on loopback TCP (default).")
+    parser.add_argument("--config", help="TOML config file (see textj.config); flags override it.")
     add_model_arguments(parser)
     parser.add_argument("--max-inflight", type=int, default=1,
                         help="Concurrent OCR executions; one backend each (default: 1).")
@@ -40,7 +43,7 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def runtime_config(args: argparse.Namespace) -> RuntimeConfig:
+def runtime_config(args: argparse.Namespace, limits: Limits | None = None) -> RuntimeConfig:
     return RuntimeConfig(
         language=args.language,
         profile=args.profile,
@@ -49,11 +52,28 @@ def runtime_config(args: argparse.Namespace) -> RuntimeConfig:
         max_inflight=args.max_inflight,
         max_queue=args.max_queue,
         warmup=not args.no_warmup,
+        limits=limits or Limits(),
     )
 
 
+def parse_with_config(
+    parser: argparse.ArgumentParser, argv: list[str] | None
+) -> tuple[argparse.Namespace, Limits]:
+    """Apply ``--config`` values as defaults, then parse flags (flags win)."""
+    config = preparse_config(argv)
+    limits = Limits()
+    if config is not None:
+        parser.set_defaults(**parser_defaults(config))
+        limits = Limits(**{**Limits().to_dict(), **config["limits"]})
+    return parser.parse_args(argv), limits
+
+
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    try:
+        args, limits = parse_with_config(build_parser(), argv)
+    except ConfigError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     logging.basicConfig(level=args.log_level.upper(), stream=sys.stderr,
                         format="[textj] %(levelname)s %(name)s: %(message)s")
 
@@ -62,7 +82,7 @@ def main(argv: list[str] | None = None) -> int:
     sys.stdout = sys.stderr
 
     try:
-        runtime = TextJRuntime(runtime_config(args))
+        runtime = TextJRuntime(runtime_config(args, limits))
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2

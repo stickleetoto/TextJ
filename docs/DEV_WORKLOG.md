@@ -4,6 +4,17 @@ Keep newest entries first.
 
 ---
 
+## 2026-09-24 — TOML config
+
+- `textj.config`: `config_version`, `[runtime]`, `[limits]`, `[server]`; unknown
+  keys/wrong types rejected; CLI flags override file values
+- `--config` on `textj-serve` and `textj-mcp`; `examples/textj.toml`
+- `tomli` dependency only for Python < 3.11
+- verified: stdio server picks up profile/queue/batch limit from file
+- tests: 111 passed
+
+---
+
 ## 2026-09-24 — ORT threads experiment, preserve_indent option
 
 - measured `intra_op_num_threads` -1/1/2/4: default (-1) kept; 2 threads

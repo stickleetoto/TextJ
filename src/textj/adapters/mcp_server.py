@@ -305,7 +305,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="Forward to a running textj-serve --tcp daemon instead of loading models in-process.",
     )
     parser.add_argument("--state-file", help="Daemon state file for --daemon.")
+    parser.add_argument("--config", help="TOML config file (see textj.config); flags override it.")
     add_model_arguments(parser)
+    parser.add_argument("--max-inflight", type=int, default=1)
     parser.add_argument("--max-queue", type=int, default=8)
     parser.add_argument("--no-warmup", action="store_true")
     parser.add_argument("--log-level", default="WARNING")
@@ -313,7 +315,14 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    from textj.app.serve import parse_with_config
+    from textj.config import ConfigError
+
+    try:
+        args, limits = parse_with_config(build_parser(), argv)
+    except ConfigError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     logging.basicConfig(level=args.log_level.upper(), stream=sys.stderr,
                         format="[textj-mcp] %(levelname)s %(name)s: %(message)s")
     protocol_out = sys.stdout.buffer
@@ -333,8 +342,10 @@ def main(argv: list[str] | None = None) -> int:
             profile=args.profile,
             det_limit_type=args.det_limit_type,
             det_limit_side_len=args.det_limit_side_len,
+            max_inflight=args.max_inflight,
             max_queue=args.max_queue,
             warmup=not args.no_warmup,
+            limits=limits,
         ))
         try:
             runtime.start()

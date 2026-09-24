@@ -106,6 +106,8 @@ with TextJClient.from_state_file() as client:
 Tools: `ocr_image`, `ocr_batch`, `textj_status`. Add `"args": ["--daemon"]` to
 share an already running `textj-serve --tcp` runtime.
 
+Runtime/daemon settings can come from a TOML file: `textj-serve --config examples/textj.toml`.
+
 Full request/response/error spec: [AI Tool Protocol v1](docs/AI_TOOL_PROTOCOL.md).
 
 ## Benchmark / debug commands

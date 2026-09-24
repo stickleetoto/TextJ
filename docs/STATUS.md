@@ -72,6 +72,7 @@ Human CLI and clipboard paths are secondary adapters/debugging tools.
 - `TextJClient`, `textj-client`
 - `textj-mcp`: tools `ocr_image`, `ocr_batch`, `textj_status`; in-process
   runtime or `--daemon`
+- TOML config (`--config`) for `textj-serve` / `textj-mcp`; example in `examples/textj.toml`
 - legacy/debug: `textj`, `textj-clipboard`
 
 ### Benchmarks
@@ -85,7 +86,7 @@ Human CLI and clipboard paths are secondary adapters/debugging tools.
 
 ### Tests
 
-`pytest -q`: 99 tests, no model downloads (fake backends / injected engine).
+`pytest -q`: 111 tests, no model downloads (fake backends / injected engine).
 `pytest -m integration`: real OCR on fixtures with bundled PP-OCRv6 (8 pass);
 Korean cases run only with `TEXTJ_KOREAN_MODELS=1` (downloads models).
 
@@ -119,5 +120,4 @@ Linux 4-vCPU container, PP-OCRv6 small, English fixtures:
   for monospace crops) and collapses repeated inner spaces
 - stdio transport handles requests sequentially (no pipelined concurrency)
 - no Windows named-pipe transport; TCP loopback is used on all platforms
-- no config file yet; configuration is CLI flags / `RuntimeConfig`
 - sampled RSS only (not a continuous peak profiler)
