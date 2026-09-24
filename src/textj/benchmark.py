@@ -38,6 +38,7 @@ class BenchmarkSummary:
     mean_score: float
     line_count: int
     metadata: dict[str, Any]
+    image: dict[str, Any] | None = None
 
     @property
     def p50_ms(self) -> float:
@@ -91,8 +92,27 @@ class BenchmarkSummary:
             "mean_score": round(self.mean_score, 6),
             "line_count": self.line_count,
             "metadata": self.metadata,
+            "image": self.image,
             "samples_ms": [round(value, 3) for value in self.latencies_ms],
         }
+
+
+def describe_image(image_path: str | Path) -> dict[str, Any] | None:
+    """Return image dimensions/format from the file header, if readable."""
+    try:
+        from PIL import Image
+
+        path = Path(image_path)
+        with Image.open(path) as image:
+            return {
+                "width": image.width,
+                "height": image.height,
+                "mode": image.mode,
+                "format": image.format,
+                "bytes": path.stat().st_size,
+            }
+    except Exception:
+        return None
 
 
 def run_benchmark(
@@ -132,4 +152,5 @@ def run_benchmark(
         mean_score=last_result.mean_score,
         line_count=len(last_result.lines),
         metadata=dict(last_result.metadata),
+        image=describe_image(image_path),
     )

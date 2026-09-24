@@ -42,6 +42,7 @@ dev = [
 textj = "textj.app.cli:main"
 textj-bench = "textj.app.bench:main"
 textj-bench-suite = "textj.app.bench_suite:main"
+textj-bench-compare = "textj.app.bench_compare:main"
 textj-clipboard = "textj.app.clipboard:main"
 
 [tool.setuptools]

@@ -98,6 +98,7 @@ def main(argv: list[str] | None = None) -> int:
     payload["recognized_text"] = final.text
     payload["cer"] = round(cer, 6) if cer is not None else None
     payload["system"] = collect_system_info()
+    payload["backend_config"] = backend.describe()
     payload["config"] = {
         "language": args.language,
         "profile": args.profile,

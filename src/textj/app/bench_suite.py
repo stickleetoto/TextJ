@@ -64,6 +64,7 @@ def main(argv: list[str] | None = None) -> int:
     payload = suite.to_dict()
     payload["backend_construct_ms"] = round(construct_ms, 3)
     payload["system"] = collect_system_info()
+    payload["backend_config"] = backend.describe()
     payload["config"] = {
         "language": args.language,
         "profile": args.profile,

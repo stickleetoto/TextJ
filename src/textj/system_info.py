@@ -1,13 +1,37 @@
 from __future__ import annotations
 
 import platform
+import subprocess
 import sys
+from pathlib import Path
 from typing import Any
+
+
+def git_commit() -> str | None:
+    """Return the TextJ source checkout commit, if running from a git tree."""
+    source_dir = Path(__file__).resolve().parent
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=source_dir,
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    commit = completed.stdout.strip()
+    return commit if completed.returncode == 0 and commit else None
 
 
 def collect_system_info() -> dict[str, Any]:
     """Collect lightweight runtime metadata for benchmark reproducibility."""
+    from textj import __version__
+
     info: dict[str, Any] = {
+        "textj_version": __version__,
+        "git_commit": git_commit(),
         "platform": platform.system(),
         "platform_release": platform.release(),
         "platform_version": platform.version(),
