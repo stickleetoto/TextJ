@@ -7,6 +7,7 @@ from pathlib import Path
 from time import perf_counter
 
 from textj.accuracy import character_error_rate
+from textj.app.common import add_backend_arguments, backend_kwargs
 from textj.backends import RapidOCRBackend
 from textj.benchmark import run_benchmark
 from textj.pipeline import OCRPipeline
@@ -27,18 +28,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=2,
         help="Warm-up OCR runs discarded before measurement (default: 2).",
     )
-    parser.add_argument(
-        "--language",
-        choices=("korean", "en", "ch"),
-        default="korean",
-        help="Recognition model language.",
-    )
-    parser.add_argument(
-        "--min-score",
-        type=float,
-        default=0.5,
-        help="Minimum OCR confidence passed to RapidOCR (default: 0.5).",
-    )
+    add_backend_arguments(parser)
     parser.add_argument(
         "--expected",
         type=Path,
@@ -72,10 +62,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         construct_started = perf_counter()
-        backend = RapidOCRBackend(
-            language=args.language,
-            text_score=args.min_score,
-        )
+        backend = RapidOCRBackend(**backend_kwargs(args))
         backend_construct_ms = (perf_counter() - construct_started) * 1000.0
 
         pipeline = OCRPipeline(backend)
@@ -113,6 +100,9 @@ def main(argv: list[str] | None = None) -> int:
     payload["system"] = collect_system_info()
     payload["config"] = {
         "language": args.language,
+        "profile": args.profile,
+        "det_limit_type": args.det_limit_type,
+        "det_limit_side_len": args.det_limit_side_len,
         "min_score": args.min_score,
         "runs": args.runs,
         "warmups": args.warmups,

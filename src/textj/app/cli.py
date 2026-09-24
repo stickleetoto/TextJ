@@ -7,6 +7,7 @@ from pathlib import Path
 from time import perf_counter
 
 from textj import __version__
+from textj.app.common import add_backend_arguments, backend_kwargs
 from textj.backends import RapidOCRBackend
 from textj.pipeline import OCRPipeline
 
@@ -17,18 +18,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Ultra-fast local OCR for images and screenshots.",
     )
     parser.add_argument("image", type=Path, help="Image file to recognize.")
-    parser.add_argument(
-        "--language",
-        choices=("korean", "en", "ch"),
-        default="korean",
-        help="Recognition model language. Korean is the default.",
-    )
-    parser.add_argument(
-        "--min-score",
-        type=float,
-        default=0.5,
-        help="Minimum OCR text confidence passed to the backend (default: 0.5).",
-    )
+    add_backend_arguments(parser)
     parser.add_argument(
         "--json",
         action="store_true",
@@ -56,10 +46,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         construct_start = perf_counter()
-        backend = RapidOCRBackend(
-            language=args.language,
-            text_score=args.min_score,
-        )
+        backend = RapidOCRBackend(**backend_kwargs(args))
         backend_construct_ms = (perf_counter() - construct_start) * 1000.0
 
         result = OCRPipeline(backend).run(args.image)

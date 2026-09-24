@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 from time import perf_counter
 
+from textj.app.common import add_backend_arguments, backend_kwargs
 from textj.backends import RapidOCRBackend
 from textj.benchmark_suite import run_suite
 from textj.pipeline import OCRPipeline
@@ -21,18 +22,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("manifest", type=Path, help="Benchmark manifest JSON.")
     parser.add_argument("--runs", type=int, default=10, help="Measured runs per case.")
     parser.add_argument("--warmups", type=int, default=1, help="Warmups per case.")
-    parser.add_argument(
-        "--language",
-        choices=("korean", "en", "ch"),
-        default="korean",
-        help="Recognition model language.",
-    )
-    parser.add_argument(
-        "--min-score",
-        type=float,
-        default=0.5,
-        help="Minimum OCR confidence.",
-    )
+    add_backend_arguments(parser)
     parser.add_argument("--output", type=Path, help="Optional JSON result path.")
     parser.add_argument("--json", action="store_true", help="Print JSON to stdout.")
     return parser
@@ -53,10 +43,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         construct_started = perf_counter()
-        backend = RapidOCRBackend(
-            language=args.language,
-            text_score=args.min_score,
-        )
+        backend = RapidOCRBackend(**backend_kwargs(args))
         construct_ms = (perf_counter() - construct_started) * 1000.0
 
         suite = run_suite(
@@ -79,6 +66,9 @@ def main(argv: list[str] | None = None) -> int:
     payload["system"] = collect_system_info()
     payload["config"] = {
         "language": args.language,
+        "profile": args.profile,
+        "det_limit_type": args.det_limit_type,
+        "det_limit_side_len": args.det_limit_side_len,
         "min_score": args.min_score,
         "runs": args.runs,
         "warmups": args.warmups,

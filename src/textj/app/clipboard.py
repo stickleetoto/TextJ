@@ -5,6 +5,7 @@ import json
 import sys
 from time import perf_counter
 
+from textj.app.common import add_backend_arguments, backend_kwargs
 from textj.backends import RapidOCRBackend
 from textj.inputs import ClipboardImageError, grab_clipboard_bgr
 from textj.pipeline import OCRPipeline
@@ -16,18 +17,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="textj-clipboard",
         description="OCR the current clipboard image and copy recognized text.",
     )
-    parser.add_argument(
-        "--language",
-        choices=("korean", "en", "ch"),
-        default="korean",
-        help="Recognition model language.",
-    )
-    parser.add_argument(
-        "--min-score",
-        type=float,
-        default=0.5,
-        help="Minimum OCR confidence (default: 0.5).",
-    )
+    add_backend_arguments(parser)
     parser.add_argument(
         "--no-copy",
         action="store_true",
@@ -59,10 +49,7 @@ def main(argv: list[str] | None = None) -> int:
         capture_ms = (perf_counter() - capture_started) * 1000.0
 
         construct_started = perf_counter()
-        backend = RapidOCRBackend(
-            language=args.language,
-            text_score=args.min_score,
-        )
+        backend = RapidOCRBackend(**backend_kwargs(args))
         construct_ms = (perf_counter() - construct_started) * 1000.0
 
         result = OCRPipeline(backend).run(image)
