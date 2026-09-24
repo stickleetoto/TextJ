@@ -2,294 +2,308 @@
 
 ## 1. Overview
 
-TextJ is designed as a latency-oriented pipeline.
+TextJ is an AI-facing OCR service/tool.
+
+The primary architecture is:
 
 ```text
-Trigger
-  |
-  v
-Capture / Input
-  |
-  v
-Image normalization
-  |
-  v
-Text detection
-  |
-  +--------------------+
-  | candidate regions  |
-  v                    |
-Region preparation     |
-  |                    |
-  v                    |
-Text recognition <-----+
-  |
-  v
-Postprocessing
-  |
-  v
-Clipboard / stdout / file
+AI agent / automation
+        |
+        +-----------------------------+
+        | Python API                  |
+        | JSON stdio                  |
+        | local daemon client         |
+        | MCP adapter                 |
+        +--------------+--------------+
+                       |
+                       v
+                Request model
+                       |
+                       v
+              Long-lived TextJ runtime
+                       |
+               +-------+--------+
+               | queue/limits   |
+               | lifecycle      |
+               | warm backend   |
+               +-------+--------+
+                       |
+                       v
+                  OCR pipeline
+                       |
+                       v
+                Result serializer
+                       |
+                       v
+            structured OCR response
 ```
 
-The desktop process should remain alive so model initialization is not repeated for each capture.
+Human-facing desktop UI is not the architectural center.
 
 ---
 
-## 2. Proposed repository structure
+## 2. Core separation
+
+### Core
+
+Platform-agnostic where practical:
+
+- request model
+- result model
+- validation
+- OCR pipeline
+- backend abstraction
+- batching
+- error model
+- timing
+- benchmark logic
+
+### Runtime
+
+Long-lived process/object:
+
+- model lifecycle
+- readiness
+- queue
+- concurrency
+- request timeout
+- shutdown
+- health/status
+
+### Adapters
+
+Thin machine-facing interfaces:
+
+- Python API
+- JSON CLI/stdin
+- local IPC client/server
+- MCP
+
+Optional adapters:
+
+- clipboard
+- screen capture
+- human CLI
+
+---
+
+## 3. Proposed repository direction
 
 ```text
-TextJ/
-├─ src/
-│  └─ textj/
-│     ├─ app/
-│     │  ├─ cli.py
-│     │  ├─ tray.py
-│     │  └─ hotkey.py
-│     ├─ capture/
-│     │  ├─ screen.py
-│     │  ├─ clipboard.py
-│     │  └─ files.py
-│     ├─ image/
-│     │  ├─ normalize.py
-│     │  ├─ resize.py
-│     │  └─ orientation.py
-│     ├─ detection/
-│     │  ├─ base.py
-│     │  └─ backends/
-│     ├─ recognition/
-│     │  ├─ base.py
-│     │  └─ backends/
-│     ├─ pipeline/
-│     │  ├─ fast.py
-│     │  ├─ accurate.py
-│     │  └─ result.py
-│     ├─ postprocess/
-│     │  ├─ layout.py
-│     │  └─ cleanup.py
-│     ├─ output/
-│     │  ├─ clipboard.py
-│     │  └─ console.py
-│     ├─ runtime/
-│     │  ├─ models.py
-│     │  ├─ session.py
-│     │  └─ device.py
-│     └─ metrics/
-│        └─ timing.py
-├─ benchmarks/
-├─ tests/
-├─ models/
-├─ scripts/
-└─ docs/
+src/textj/
+├─ api/
+│  ├─ request.py
+│  ├─ response.py
+│  ├─ errors.py
+│  └─ protocol.py
+├─ runtime/
+│  ├─ runtime.py
+│  ├─ queue.py
+│  ├─ lifecycle.py
+│  └─ config.py
+├─ transport/
+│  ├─ stdio.py
+│  ├─ local_server.py
+│  └─ local_client.py
+├─ adapters/
+│  ├─ mcp/
+│  ├─ clipboard/
+│  └─ capture/
+├─ backends/
+├─ pipeline.py
+├─ models.py
+├─ benchmark.py
+└─ app/
 ```
 
-The exact names can change, but the boundaries should remain clear.
+Do not refactor solely to match this tree. Migrate incrementally as implementation requires.
 
 ---
 
-## 3. Core interfaces
+## 4. Canonical internal request
 
-### Detector
+All external interfaces should become one internal request type.
 
-Input:
-
-- normalized image
-
-Output:
-
-- text region polygons or boxes
-- optional detection confidence
-
-Conceptual interface:
+Conceptually:
 
 ```python
-class TextDetector:
-    def detect(self, image) -> list[TextRegion]:
-        ...
+@dataclass
+class OCRRequest:
+    request_id: str
+    image: ImageInput
+    mode: str
+    language: str
+    min_score: float
+    include_boxes: bool
+    include_timings: bool
+    timeout_ms: int | None
 ```
 
-### Recognizer
+Likewise, all paths should return one internal response/result type.
 
-Input:
-
-- cropped text region
-
-Output:
-
-- text
-- confidence
-- optional language metadata
-
-```python
-class TextRecognizer:
-    def recognize(self, crop) -> Recognition:
-        ...
-```
-
-### OCR pipeline
-
-The pipeline owns ordering and optimization decisions.
-
-```python
-class OCRPipeline:
-    def run(self, image) -> OCRResult:
-        ...
-```
-
-This allows detection and recognition engines to be swapped independently.
+This prevents MCP, CLI, daemon, and Python API behavior from drifting.
 
 ---
 
-## 4. Runtime lifecycle
-
-### Cold path
+## 5. Runtime lifecycle
 
 ```text
 process start
--> load configuration
--> initialize runtime
--> load OCR models
--> warm-up inference
+-> load config
+-> initialize backend
+-> model warmup
 -> ready
+
+request
+-> validate
+-> queue
+-> acquire execution slot
+-> OCR
+-> serialize result
+-> return
+
+shutdown
+-> stop accepting requests
+-> finish/cancel bounded work
+-> release backend
 ```
 
-### Warm path
+Do not initialize the backend per request.
+
+---
+
+## 6. Concurrency
+
+Start conservatively.
+
+OCR backends may not benefit from unrestricted parallel inference.
+
+The runtime should own concurrency policy.
+
+Potential first policy:
 
 ```text
-trigger
--> acquire image
--> run OCR pipeline
--> postprocess
--> write clipboard
+max_inflight = 1
+bounded queue = N
 ```
 
-The warm path is the primary optimization target.
+Then benchmark alternatives.
+
+Important metrics:
+
+- queue wait
+- service time
+- total latency
+- throughput
+- memory
+- error rate
+
+Do not use an unbounded executor.
 
 ---
 
-## 5. Fast path strategy
+## 7. Image input path
 
-A common mistake is sending the original full-resolution screenshot directly through every OCR stage.
+Preferred internal representation:
 
-TextJ should instead use a staged path.
+- validated ndarray
+- contiguous bytes/buffer where appropriate
+
+Avoid:
 
 ```text
-original image
-  |
-  +-> reduced detector image
-          |
-          v
-     find text areas
-          |
-          v
-crop corresponding regions from original image
-          |
-          v
-recognize only useful pixels
+agent screenshot
+-> encode
+-> temp file
+-> decode
+-> OCR
 ```
 
-This makes detector cost depend on a bounded input size while preserving text detail during recognition.
+Where transport requires encoded bytes, decode exactly once near the boundary.
 
 ---
 
-## 6. Region scheduling
+## 8. Batch path
 
-Detected regions should normally be:
+Batching can mean two things:
 
-1. filtered,
-2. ordered,
-3. batched where supported,
-4. recognized,
-5. reassembled into reading order.
+### Request batching
 
-Tiny regions below a configurable threshold may be dropped in fast mode.
+One caller sends many independent images.
 
-Duplicate or strongly overlapping boxes should be merged before recognition.
+### Model batching
 
----
+Recognizer processes multiple crops together.
 
-## 7. Threading and concurrency
+Keep these concepts separate.
 
-Concurrency is useful only when it lowers total latency.
-
-Potential parallel work:
-
-- capture and runtime readiness checks,
-- preprocessing independent crops,
-- batched recognition,
-- output formatting after recognition.
-
-Avoid spawning a new worker process for each OCR action.
-
-Long-lived threads or runtime sessions are preferred.
+The public API can support request batching even if the backend initially processes sequentially.
 
 ---
 
-## 8. Memory policy
+## 9. Error model
 
-The desktop service may intentionally trade some memory for speed.
+Internal exceptions should map to stable public error codes.
 
-Preferred:
+Adapters must not expose raw Python tracebacks as the normal protocol.
 
-- keep model sessions alive,
-- keep reusable buffers when practical,
-- avoid repeatedly loading model weights,
-- avoid unnecessary image copies,
-- reuse preallocated arrays when profiling shows benefit.
-
-Memory optimization comes after eliminating major latency sources.
+Debug logging may retain traces locally.
 
 ---
 
-## 9. Platform direction
+## 10. Transport
 
-### Initial platform
+Preferred progression:
 
-Windows-first desktop workflow.
+1. Python API
+2. JSON/stdio reference protocol
+3. long-lived local daemon
+4. MCP adapter
 
-Reasons:
+For daemon transport, compare:
 
-- primary intended environment,
-- global hotkey and region capture are central features,
-- the first benchmark target can remain controlled.
+- Windows named pipe
+- Unix domain socket where available
+- loopback TCP
 
-### Later
-
-The core OCR pipeline should remain platform-independent enough to support Linux and possibly macOS later.
-
-Platform-specific code should stay inside capture, hotkey, tray, and clipboard adapters.
-
----
-
-## 10. Failure behavior
-
-A failed OCR attempt should fail quickly and visibly.
-
-Examples:
-
-- empty selection -> no OCR
-- no text detected -> short notification, clipboard unchanged by default
-- backend unavailable -> clear fallback or error
-- GPU provider failure -> retry on CPU if configured
-- unsupported image -> explicit error
-
-Silent multi-second fallback chains should be avoided.
+Keep network exposure local by default.
 
 ---
 
 ## 11. Observability
 
-Every pipeline run should optionally expose stage timing:
+Every request can optionally report:
 
 ```text
-capture          8 ms
-normalize        3 ms
-detect          42 ms
-crop             2 ms
-recognize        71 ms
-postprocess      2 ms
-clipboard        1 ms
-----------------------
-total          129 ms
+queue
+decode
+normalize
+detect
+recognize
+postprocess
+serialize
+total
 ```
 
-Performance work without stage-level timing is not accepted as optimization.
+Also track daemon-level counters later:
+
+- requests
+- failures by code
+- queue depth
+- busy rejects
+- average/p95 latency
+
+Avoid high-overhead telemetry in the hot path by default.
+
+---
+
+## 12. Human utilities
+
+The CLI and clipboard prototype remain useful for:
+
+- debugging
+- manual smoke tests
+- benchmark input
+- integration diagnosis
+
+They are adapters, not the main product.

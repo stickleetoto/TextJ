@@ -1,21 +1,35 @@
 # TextJ — Claude Development Instructions
 
-You are working on **TextJ**, an ultra-fast local OCR utility.
+You are working on **TextJ**, an ultra-fast local OCR tool for AI agents and automated toolchains.
 
-The product goal is simple:
+TextJ is **not primarily a human-facing desktop OCR application**.
 
-> **Hotkey -> select text on screen -> release -> usable text is already in the clipboard.**
+The product goal is:
 
-TextJ is not primarily an OCR-model research project. It is a **latency-focused desktop OCR product**. Reuse mature OCR models first, then optimize the whole path from user action to clipboard.
+> **An AI agent supplies an image or screenshot and receives structured OCR output with minimal latency, predictable behavior, and no unnecessary UI.**
+
+Primary consumers include:
+
+- LLM agents
+- computer-use agents
+- automation workers
+- local AI runtimes
+- MCP/tool servers
+- OCR-heavy pipelines
+- code/terminal/UI analysis systems
+
+Human-facing CLI commands exist mainly for debugging, benchmarking, and integration testing.
 
 Read these before major work:
 
 1. `docs/HANDOFF_CLAUDE.md`
 2. `docs/STATUS.md`
-3. `docs/ROADMAP.md`
+3. `docs/PRODUCT.md`
 4. `docs/ARCHITECTURE.md`
-5. `docs/PERFORMANCE.md`
+5. `docs/AI_TOOL_PROTOCOL.md`
 6. `docs/EXECUTION_PLAN.md`
+7. `docs/PERFORMANCE.md`
+8. `docs/ROADMAP.md`
 
 ---
 
@@ -23,293 +37,302 @@ Read these before major work:
 
 Work autonomously and keep moving.
 
-Do not stop after producing plans when implementation is possible. Prefer:
+Prefer:
 
 ```text
 inspect
 -> implement
 -> test
--> benchmark where possible
--> document result
--> continue to the next unblocked task
+-> benchmark
+-> update schemas/docs
+-> continue to next unblocked task
 ```
 
-If one task is blocked by platform/hardware/manual validation, record the blocker and move to the next independent task.
+Do not stop after writing plans when implementation is possible.
 
-Do not wait for approval between ordinary implementation steps.
+If model downloads, hardware, or OS-specific validation are unavailable, record the blocker and continue with independent work.
 
 ---
 
 ## 2. Non-negotiable product rules
 
+### AI-first interface
+
+The canonical TextJ interface is machine-facing.
+
+The primary result should be structured data such as:
+
+```json
+{
+  "text": "...",
+  "lines": [
+    {
+      "text": "...",
+      "score": 0.98,
+      "box": [[0,0],[10,0],[10,5],[0,5]]
+    }
+  ],
+  "timings_ms": {},
+  "backend": "...",
+  "request_id": "..."
+}
+```
+
+Plain text output is a convenience adapter, not the protocol.
+
+### Stable schemas
+
+AI tools must not depend on undocumented output shape.
+
+Version machine-facing request/response schemas.
+
+Backward-incompatible schema changes require an explicit protocol version change.
+
 ### Latency first
 
-Optimize **time-to-clipboard**, not isolated model inference.
+Optimize **request-to-structured-response latency**, not isolated model inference.
 
-The important measurement is:
+Measure:
 
 ```text
-trigger
-+ capture
-+ conversion
+request parsing
++ image acquisition/decode
++ normalization
 + detection
-+ crop
 + recognition
 + postprocess
-+ clipboard
-= user-visible latency
++ serialization
+= total tool latency
 ```
 
 ### Local first
 
-Default OCR must stay local and work offline after required models are available.
+Default OCR runs locally and should work offline after models are present.
 
-Do not introduce cloud OCR as a required dependency.
+Do not require cloud OCR.
 
 ### Warm runtime
 
-The final desktop path must not initialize the OCR model on every request.
+Repeated AI calls must not reconstruct the OCR model every time.
 
-A resident model/runtime is a core architectural requirement.
+A long-lived runtime/daemon is a core requirement.
+
+### In-memory first
+
+Prefer:
+
+- ndarray
+- bytes
+- mapped/shared buffers
+- existing local file references
+
+Avoid temporary image files and unnecessary PNG/JPEG re-encoding.
 
 ### Korean + English first
 
-Mixed Korean/English screen text is the primary language target.
+Mixed Korean/English is the first language target.
 
-Do not damage code, URLs, paths, filenames, identifiers, or punctuation with aggressive language correction.
+Preserve:
+
+- code
+- terminal output
+- URLs
+- paths
+- filenames
+- identifiers
+- punctuation
 
 ### Replaceable backend
 
 RapidOCR is the first backend, not the architecture.
 
-Keep OCR behind a backend interface.
+---
+
+## 3. Product priority
+
+Unless evidence requires otherwise:
+
+1. validate current OCR core
+2. finish benchmark/regression infrastructure
+3. define and freeze protocol v1 draft
+4. build long-lived OCR runtime
+5. add local machine-facing IPC/API
+6. add batch OCR
+7. add concurrency/backpressure
+8. add MCP adapter
+9. optimize measured bottlenecks
+10. package a headless service/tool
+
+Human desktop UX is optional and lower priority.
+
+Do **not** prioritize tray UI, global hotkeys, screen-selection overlays, or decorative GUI work.
 
 ---
 
-## 3. Current stack
+## 4. Canonical interface layers
 
-Baseline:
-
-- Python 3.10+
-- RapidOCR 3.x
-- PP-OCRv5 mobile detector
-- PP-OCRv5 Korean mobile recognizer
-- ONNX Runtime CPU baseline
-- NumPy
-- Pillow
-- psutil
-- Win32 clipboard integration
-
-Current CLI entry points:
+Target layers:
 
 ```text
-textj
-textj-bench
-textj-bench-suite
-textj-clipboard
+AI caller / agent
+    |
+    +-- Python API
+    +-- JSON CLI/stdio
+    +-- local daemon API
+    +-- MCP adapter
+            |
+            v
+      TextJ Runtime
+            |
+            v
+       OCR Backend
 ```
+
+Keep adapters thin.
+
+All adapters should converge on the same internal request/result model.
 
 ---
 
-## 4. Engineering rules
+## 5. Error behavior
 
-### Preserve working paths
+Machine callers need deterministic failures.
 
-Do not rewrite the entire project because another architecture looks cleaner.
+Prefer explicit error codes, for example:
 
-Refactor only when the current design materially blocks correctness, testing, or latency.
+- `INVALID_REQUEST`
+- `IMAGE_NOT_FOUND`
+- `IMAGE_DECODE_FAILED`
+- `UNSUPPORTED_IMAGE`
+- `BACKEND_NOT_READY`
+- `OCR_FAILED`
+- `REQUEST_TOO_LARGE`
+- `BUSY`
+- `TIMEOUT`
+- `INTERNAL_ERROR`
 
-### Measure performance claims
+Do not rely on parsing human prose to understand failures.
 
-Do not write "faster", "optimized", or "low latency" without measurements.
+---
 
-For performance-sensitive changes, prefer reporting:
+## 6. Performance and resource rules
 
-- p50
-- p95
+Measure at minimum:
+
+- warm p50
+- warm p95
 - max
-- CER or another accuracy metric when applicable
-- RSS / memory impact
-- configuration used
+- request size/image dimensions
+- CER when ground truth exists
+- RSS
+- queue time when daemon mode exists
+- serialization overhead when protocol mode exists
 
-### Avoid unnecessary image copies
+Do not claim optimization without measurements.
 
-Never add a pipeline like:
-
-```text
-capture -> PNG encode -> disk -> PNG decode -> ndarray -> OCR
-```
-
-when an in-memory image can be passed directly.
-
-Prefer contiguous reusable buffers and direct ndarray/native-buffer paths.
-
-### Keep fast and accurate paths separable
-
-Do not force expensive orientation detection, enhancement, or retries onto every request.
-
-The common case should stay fast.
-
-### Platform boundaries
-
-Keep Windows-only capture/hotkey/clipboard/tray code separated from the OCR core.
-
-Core OCR and benchmark code should remain testable without Windows APIs.
-
-### Dependencies
-
-Add dependencies only when they have clear value.
-
-For every heavy dependency, consider:
-
-- startup cost
-- memory cost
-- packaging cost
-- binary size
-- platform impact
-
-Avoid heavy GUI frameworks unless justified by measurement or implementation need.
+Do not optimize only for throughput if single-request latency regresses badly.
 
 ---
 
-## 5. Test rules
+## 7. Concurrency rules
 
-Before considering a task complete:
+AI systems may call TextJ concurrently.
+
+The runtime should eventually define:
+
+- maximum in-flight requests
+- bounded queue
+- backpressure behavior
+- cancellation/timeout behavior
+- deterministic overload response
+
+Never allow unbounded request accumulation.
+
+---
+
+## 8. Security boundary
+
+TextJ is a local tool, but machine-facing interfaces still need boundaries.
+
+Do not:
+
+- expose arbitrary code execution
+- accept arbitrary shell commands
+- deserialize unsafe Python objects
+- trust unbounded base64 payloads
+- expose a network listener beyond loopback by default
+
+Local APIs should bind to loopback or OS-local IPC by default.
+
+---
+
+## 9. Testing rules
+
+Before meaningful completion:
 
 ```powershell
 pytest -q
 ```
 
-When OCR dependencies/models are available, also run the relevant real command.
+Pure tests should not require model downloads.
 
-For benchmark-related changes, run or preserve compatibility with:
+Use fake backends for:
 
-```powershell
-textj-bench <image> --runs 20 --warmups 2
-textj-bench-suite <manifest> --runs 10 --warmups 1
-```
+- protocol tests
+- runtime lifecycle tests
+- queue tests
+- timeout tests
+- batch tests
+- error schema tests
 
-Do not make tests require model downloads unless explicitly marked as integration tests.
-
-Core tests should use fake backends where possible.
-
----
-
-## 6. Definition of done
-
-A development item is done only when:
-
-- implementation exists,
-- errors are handled reasonably,
-- tests exist for logic that can be tested,
-- docs/status are updated,
-- no known regression is intentionally hidden,
-- performance claims have evidence,
-- the repository remains runnable from a clean environment.
-
-See `docs/DEFINITION_OF_DONE.md` for the full checklist.
+Real OCR/model tests should be integration tests.
 
 ---
 
-## 7. Work logging
+## 10. Development logging
 
-After a meaningful batch of work, update:
-
-`docs/DEV_WORKLOG.md`
-
-Record:
-
-- date
-- commit or working state
-- what changed
-- tests run
-- benchmark result if any
-- known problems
-- next task
-
-Do not turn the worklog into long prose. Keep it operational.
-
-Also update `docs/STATUS.md` when the real project state changes.
-
----
-
-## 8. Priority order
-
-Use `docs/EXECUTION_PLAN.md` as the main queue.
-
-Unless evidence suggests otherwise, prioritize:
-
-1. stabilize/test the existing core
-2. finish reproducible benchmark infrastructure
-3. build the resident OCR runtime
-4. make clipboard OCR use the resident runtime
-5. implement Windows global hotkey
-6. implement region selection + direct in-memory capture
-7. optimize the measured bottleneck
-8. improve Korean/English quality regressions
-9. package a reliable Windows build
-
-The official version roadmap remains in `docs/ROADMAP.md`.
-
----
-
-## 9. Things not to do yet
-
-Do not spend major effort on:
-
-- a custom OCR foundation model
-- cloud accounts/sync
-- translation
-- summarization
-- document management
-- Electron-style heavy UI
-- broad cross-platform UI before Windows works
-- speculative GPU rewrites before CPU baseline measurement
-- aesthetic UI work before the capture-to-clipboard path works
-
----
-
-## 10. When blocked
-
-If real Windows validation is unavailable:
-
-1. write unit-testable platform abstractions,
-2. add fake/mock implementations,
-3. document the exact manual validation command,
-4. continue with another independent task.
-
-If model download/network access is unavailable:
-
-1. keep unit tests backend-independent,
-2. do not fake benchmark numbers,
-3. record that real OCR validation is pending.
-
-Never invent performance results.
-
----
-
-## 11. Safe autonomy
-
-Normal source edits, tests, docs, refactors, benchmark tooling, and non-destructive repository improvements are expected.
-
-Do not:
-
-- force-push or rewrite history,
-- delete large project sections without necessity,
-- remove user work merely to simplify the codebase,
-- silently change the product goal,
-- publish secrets or private local data,
-- commit downloaded OCR model binaries unless explicitly intended.
-
----
-
-## 12. Handoff expectation
-
-At the end of a long session, leave TextJ so another agent can continue without reconstructing context.
-
-At minimum update:
+After meaningful work, update:
 
 - `docs/STATUS.md`
 - `docs/DEV_WORKLOG.md`
+- `docs/EXECUTION_PLAN.md` when task state changes
 
-and leave the next concrete tasks in `docs/EXECUTION_PLAN.md` accurate.
+Keep factual implementation status separate from future plans.
+
+Never invent benchmark numbers.
+
+---
+
+## 11. Things not to prioritize
+
+Do not spend major effort on:
+
+- tray UI
+- global hotkeys
+- human region-selection UX
+- cloud accounts
+- translation/summarization
+- document editor
+- Electron shell
+- custom OCR foundation model
+- speculative language rewrites
+- aesthetic UI
+
+Those are not the core product.
+
+---
+
+## 12. Safe autonomy
+
+Normal code edits, tests, docs, benchmark tooling, protocol work, runtime work, local IPC, and adapters are expected.
+
+Do not:
+
+- force-push
+- rewrite history
+- delete major user work without necessity
+- commit secrets
+- commit private screenshots
+- commit downloaded model caches by accident
+
+At the end of a long session, leave the repository self-explanatory for the next agent.

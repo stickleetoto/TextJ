@@ -1,10 +1,18 @@
 # Contributing to TextJ
 
-TextJ is a latency-sensitive OCR utility. Contributions should preserve the product goal:
+TextJ is an AI-facing, latency-sensitive local OCR tool.
 
-> Hotkey -> region -> OCR -> clipboard with minimal delay.
+## Product rule
 
-## Development setup
+Optimize for:
+
+```text
+machine request -> structured OCR response
+```
+
+not human UI polish.
+
+## Setup
 
 ```powershell
 python -m venv .venv
@@ -14,92 +22,84 @@ pip install -e ".[dev]"
 pytest -q
 ```
 
-## Before coding
+## Read first
 
-Read:
+- `CLAUDE.md`
+- `docs/PRODUCT.md`
+- `docs/AI_TOOL_PROTOCOL.md`
+- `docs/STATUS.md`
+- `docs/EXECUTION_PLAN.md`
+- `docs/DEFINITION_OF_DONE.md`
 
-- `CLAUDE.md` for engineering constraints
-- `docs/STATUS.md` for the factual current state
-- `docs/EXECUTION_PLAN.md` for the active queue
-- `docs/DEFINITION_OF_DONE.md` for completion criteria
+## PR expectations
 
-## Pull request expectations
-
-For ordinary code changes, include:
+Describe:
 
 - what changed
 - why
-- tests run
+- tests
+- protocol/schema impact
 - known limitations
 
-For performance-sensitive changes, also include:
+For performance changes include when possible:
 
-- benchmark command
-- before p50/p95 when available
-- after p50/p95 when available
-- CER/accuracy impact when applicable
-- memory impact when applicable
-- hardware/provider configuration
+- p50
+- p95
+- CER
+- RSS
+- request/input configuration
+- transport/runtime configuration
 
-Do not claim speed improvements from isolated inference timing if end-to-end latency regresses.
+## API stability
+
+Machine-facing schemas are public behavior.
+
+Do not silently rename:
+
+- fields
+- error codes
+- operations
+- protocol versions
+
+When breaking changes are unavoidable, version them.
 
 ## Dependencies
 
-Keep the dependency set lean.
+Keep headless deployment lean.
 
-Before adding a large dependency, consider:
+Avoid adding GUI frameworks.
 
-- import/startup time
-- resident RSS
+Before adding a dependency consider:
+
+- startup cost
+- RSS
 - package size
-- Windows packaging impact
-- whether a standard library or existing dependency is sufficient
+- cross-platform impact
+- daemon deployment impact
 
-## Platform code
+## Testing
 
-Windows-specific implementation belongs in Windows/capture/desktop integration modules rather than generic OCR core code.
+Use fake backends for protocol/runtime logic.
 
-Keep pure logic independently testable.
+Unit tests should not download OCR models.
 
-## Benchmark changes
+Real OCR belongs in integration validation.
 
-Preserve benchmark reproducibility.
-
-Do not silently change:
-
-- normalization rules
-- percentile semantics
-- benchmark warmup semantics
-- ground-truth interpretation
-
-If such behavior must change, document it and update regression tests.
-
-## Test policy
-
-Unit tests should avoid requiring OCR model downloads.
-
-Use fake backends for core logic.
-
-Real-model and Windows integration validation may be documented separately when the environment cannot execute them.
-
-## Data policy
+## Data
 
 Do not commit:
 
 - private screenshots
-- credentials
-- local paths containing sensitive information
-- downloaded model caches without an explicit repository decision
-- copyrighted benchmark sets without permission
+- secrets
+- model caches by accident
+- unlicensed datasets
 
-Prefer purpose-built benchmark fixtures.
+Prefer purpose-built fixtures.
 
-## Documentation
+## Continuity
 
-After meaningful batches, keep these accurate:
+After meaningful work update:
 
 - `docs/STATUS.md`
 - `docs/DEV_WORKLOG.md`
 - `docs/EXECUTION_PLAN.md`
-
-A future developer should be able to continue from the repository alone.

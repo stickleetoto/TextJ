@@ -2,141 +2,197 @@
 
 ## 1. What is TextJ?
 
-TextJ is a lightweight local OCR utility that turns visible text in an image or screen region into editable text as quickly as possible.
+TextJ is a **local, low-latency OCR primitive for AI agents and automated systems**.
 
-The intended experience is:
+It is designed to answer requests such as:
 
 ```text
-press hotkey
--> drag over text
--> release mouse
--> text is already in clipboard
+"Extract every visible line of text from this screenshot."
+"Read this UI state and return boxes + confidence."
+"Run OCR on these 20 image crops."
+"Give my computer-use agent machine-readable text from the latest frame."
 ```
 
-A conventional OCR application often makes the user open a window, import a file, wait for analysis, select output, and copy it.
+The canonical interaction is not a human clicking buttons.
 
-TextJ should remove almost all of those steps.
+It is:
 
----
-
-## 2. Primary use cases
-
-### Region OCR
-
-The user presses a global hotkey and selects part of the screen.
-
-TextJ recognizes only that region and places the result in the clipboard.
-
-### Clipboard image OCR
-
-If the clipboard already contains an image, TextJ should be able to OCR it directly.
-
-### File OCR
-
-The user passes an image file to TextJ through CLI, drag-and-drop, or the desktop shell.
-
-### Batch OCR
-
-A folder of screenshots can be processed into text files for debugging, archiving, dataset preparation, or note extraction.
+```text
+AI/worker
+  -> sends image
+  -> TextJ processes locally
+  -> returns structured OCR result
+```
 
 ---
 
-## 3. Product principles
+## 2. Primary users
 
-### 3.1 Latency first
+TextJ is built for software callers:
 
-The user should feel that TextJ is instant.
+- LLM agents
+- local autonomous agents
+- computer-use systems
+- MCP servers/tools
+- automation pipelines
+- screenshot analyzers
+- testing systems
+- vision preprocessing pipelines
 
-A slightly less accurate result that arrives immediately may be more useful than a perfect result that requires several seconds, provided the user can switch to a higher-accuracy mode when needed.
-
-### 3.2 Local first
-
-OCR should work without uploading screenshots to a remote server.
-
-This improves privacy, removes network latency, and makes the utility usable offline.
-
-### 3.3 Warm process
-
-The default desktop mode should keep the OCR runtime and required models loaded.
-
-Cold startup and model initialization are benchmarked separately from warm OCR latency.
-
-### 3.4 Replaceable OCR backend
-
-TextJ must not be permanently coupled to one OCR library.
-
-Detection and recognition implementations should sit behind internal interfaces.
-
-### 3.5 Korean + English first
-
-The first language target is mixed Korean and English text because this covers the main intended environment while keeping the initial scope controlled.
-
-### 3.6 Minimal interaction
-
-The default successful path should require no confirmation dialog.
-
-The output should be copied automatically.
+A human may use the CLI for testing, but human desktop UX is secondary.
 
 ---
 
-## 4. Modes
+## 3. Primary inputs
 
-### Fast mode
+TextJ should support machine-friendly inputs.
 
-Optimized for UI text, code snippets, chat screenshots, menus, and ordinary screen text.
+Priority order:
 
-Characteristics:
+1. in-memory image array inside Python
+2. local file path
+3. encoded image bytes
+4. daemon request containing or referencing image data
+5. batch of images
+6. optional capture adapters
 
-- minimal preprocessing
-- aggressive resize limits
-- fast text detection
-- short postprocessing path
-
-### Accurate mode
-
-Used when the first pass is uncertain or the source image is difficult.
-
-Possible differences:
-
-- larger detector input
-- additional preprocessing
-- orientation handling
-- slower recognition backend
-- second-pass recognition of low-confidence regions
-
-Fast mode is the default.
+Temporary files should not be required for normal programmatic use.
 
 ---
 
-## 5. Non-goals for v1
+## 4. Primary outputs
 
-The following are intentionally outside the first release unless required by core OCR quality:
+Structured output is first-class.
 
-- full PDF document management
-- cloud synchronization
-- user accounts
-- collaborative annotation
+Minimum useful result:
+
+```json
+{
+  "protocol_version": "1",
+  "request_id": "abc",
+  "text": "hello",
+  "lines": [
+    {
+      "text": "hello",
+      "score": 0.98,
+      "box": [[12, 20], [80, 20], [80, 40], [12, 40]]
+    }
+  ],
+  "backend": "rapidocr-onnx",
+  "timings_ms": {
+    "total": 42.1
+  }
+}
+```
+
+Optional future fields can include:
+
+- orientation
+- language hints
+- region grouping
+- word-level boxes
+- input dimensions
+- model/provider metadata
+
+Machine-readable stability matters more than pretty console formatting.
+
+---
+
+## 5. Product principles
+
+### 5.1 Fast warm calls
+
+AI tools may invoke OCR repeatedly.
+
+Model construction should happen once, not once per request.
+
+### 5.2 Deterministic behavior
+
+The caller should be able to depend on:
+
+- schema
+- error codes
+- timeout behavior
+- size limits
+- ordering rules
+- version negotiation
+
+### 5.3 Local by default
+
+Do not upload agent screenshots to remote OCR services by default.
+
+### 5.4 In-memory by default
+
+Avoid encode/decode/disk cycles when an image is already available in memory.
+
+### 5.5 Structured, not conversational
+
+TextJ is a tool.
+
+It should return OCR evidence, not invent explanations or interpret the image semantically.
+
+### 5.6 Backend independence
+
+The public API must not expose unnecessary RapidOCR-specific concepts.
+
+---
+
+## 6. Core use cases
+
+### Agent screenshot OCR
+
+A computer-use agent captures a frame and sends a crop to TextJ.
+
+### Batch crop OCR
+
+An upstream detector provides multiple image crops and TextJ recognizes them efficiently.
+
+### UI parsing support
+
+An agent combines TextJ boxes/text with accessibility or vision data.
+
+### Code/terminal extraction
+
+TextJ preserves exact-ish technical strings for another model to reason over.
+
+### MCP tool
+
+An MCP server exposes TextJ as an OCR tool to compatible agents.
+
+---
+
+## 7. Non-goals for v1
+
+Not required:
+
+- tray UI
+- global keyboard shortcut
+- drag-to-select overlay
+- human OCR history
+- cloud account
+- sync
 - document editor
 - translation
 - summarization
-- handwriting-first recognition
-- a custom foundation OCR model
-- complex AI assistant features
+- semantic image reasoning
+- custom foundation OCR model
 
-These can be separate future projects or plugins.
+A human-facing desktop wrapper may exist later, but it must remain an adapter around the AI-facing core.
 
 ---
 
-## 6. Success criteria for v1
+## 8. v1 success criteria
 
 TextJ v1 is successful when:
 
-- region capture is reliable,
-- Korean/English OCR works locally,
-- warm OCR feels immediate on ordinary screenshots,
-- output reaches the clipboard automatically,
-- benchmark results can be reproduced,
-- OCR backend can be changed without rewriting the application,
-- the app can stay running with acceptable memory usage.
-
-The exact performance thresholds are defined in [PERFORMANCE.md](PERFORMANCE.md).
+- a local agent can call OCR repeatedly without model reload,
+- request/response schema is versioned and stable,
+- path/bytes/in-memory inputs are supported by clear adapters,
+- structured text/box/confidence output is available,
+- batch requests are supported,
+- concurrent calls have defined behavior,
+- overload is bounded,
+- errors are machine-readable,
+- benchmark results are reproducible,
+- Korean/English mixed OCR is useful,
+- the backend can be replaced without changing the public contract.

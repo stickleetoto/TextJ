@@ -1,76 +1,109 @@
 # Definition of Done
 
-Use this checklist for meaningful TextJ development tasks.
-
-A task does not need every item below if an item is genuinely irrelevant, but skipping relevant validation should be explicit.
+Use this checklist for meaningful TextJ changes.
 
 ## Correctness
 
-- implementation matches the intended behavior
-- invalid input has a defined failure path
-- no silent destructive fallback
-- Unicode text is preserved
-- platform-specific behavior is guarded appropriately
+- implementation matches intended behavior
+- invalid input has deterministic behavior
+- machine-facing errors use stable codes when applicable
+- Unicode is preserved
+- request IDs are preserved through the call path when applicable
+- no silent fallback changes result semantics
 
-## Tests
+## Protocol/API
 
-- unit tests exist for pure logic
-- regression test added for a fixed bug when practical
-- tests do not require network/model downloads unless clearly integration-only
-- `pytest -q` passes in the available environment
+When touching public machine-facing behavior:
 
-## OCR integration
+- schema is documented
+- protocol version behavior is tested
+- success and error responses are tested
+- malformed input is rejected deterministically
+- limits are enforced before expensive work where practical
+- stdout protocol output is not polluted by debug logs
+- breaking schema changes are not introduced silently
 
-When the task touches actual OCR:
+## Runtime
 
-- Korean path considered
-- English/mixed path considered
+When touching the resident service:
+
+- backend is not accidentally reconstructed per request
+- lifecycle is tested
+- readiness state is defined
+- queue is bounded
+- concurrency policy is explicit
+- shutdown behavior is defined
+- timeout/BUSY behavior is tested
+
+## OCR
+
+When OCR behavior changes:
+
+- Korean considered
+- English/mixed considered
+- technical text considered
 - empty OCR handled
 - confidence behavior considered
-- reading order not silently assumed if relevant
+- boxes/order behavior tested where relevant
 
 ## Performance
 
-When the task claims or affects performance:
+When claiming or affecting performance:
 
-- before/after measurement where possible
-- p50 and p95 preferred
-- accuracy impact considered
-- memory impact considered
-- benchmark configuration recorded
+- p50/p95 measured where possible
+- total request latency preferred over isolated inference
+- accuracy impact checked
+- RSS impact checked
+- configuration recorded
 - no fabricated numbers
 
-## Windows UX
+For daemon changes, also consider:
 
-When the task touches desktop integration:
+- queue time
+- serialization
+- transport overhead
+- throughput
+- overload behavior
 
-- DPI considered
-- multi-monitor considered
-- cancellation/error path considered
-- clipboard lock/contention considered
-- no unnecessary temporary files
-- cleanup/unregister/close behavior implemented
+## Security
+
+For machine-facing transports:
+
+- local-only default
+- no arbitrary command execution
+- no unsafe object deserialization
+- payload sizes bounded
+- malformed requests cannot create unbounded work
+
+## Tests
+
+- `pytest -q` passes where executable
+- pure logic uses fake backends where practical
+- unit tests do not require model download by default
+- fixed bugs gain regression tests when practical
 
 ## Maintainability
 
-- backend abstraction preserved
-- Windows-specific code does not leak unnecessarily into OCR core
-- dependency addition justified
-- public/config behavior documented
-- obvious dead code removed
+- OCR backend remains replaceable
+- adapters remain thin
+- core request/result behavior is not duplicated across adapters
+- dependencies are justified
+- no GUI dependency is added without a compelling reason
 
 ## Documentation
 
-Update when relevant:
+Update relevant:
 
 - `docs/STATUS.md`
 - `docs/DEV_WORKLOG.md`
-- `docs/ROADMAP.md`
-- user-facing README
+- `docs/EXECUTION_PLAN.md`
+- `docs/AI_TOOL_PROTOCOL.md`
+- README when public behavior changes
 
 ## Git hygiene
 
-- commits have meaningful messages
-- no downloaded model/cache binaries accidentally committed
-- no secrets/private screenshots committed
-- no force push for ordinary development
+- meaningful commits
+- no secrets
+- no private screenshots
+- no accidental model/cache binaries
+- no force-push for ordinary work

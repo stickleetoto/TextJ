@@ -2,44 +2,77 @@
 
 Keep newest entries first.
 
-Use concise operational notes. Do not duplicate the full roadmap here.
+---
+
+## 2026-09-24 — Product direction corrected to AI-first OCR tooling
+
+### Direction
+
+TextJ is now explicitly defined as an AI-facing local OCR tool/service.
+
+Primary path:
+
+```text
+AI caller -> warm TextJ runtime -> structured OCR response
+```
+
+Human desktop UX is secondary.
+
+### Documentation rewritten
+
+- root `CLAUDE.md`
+- `docs/PRODUCT.md`
+- `docs/ARCHITECTURE.md`
+- `docs/AI_TOOL_PROTOCOL.md`
+- `docs/ROADMAP.md`
+- `docs/EXECUTION_PLAN.md`
+- `docs/HANDOFF_CLAUDE.md`
+- `docs/STATUS.md`
+- `docs/PERFORMANCE.md`
+- `docs/CLAUDE_KICKOFF_PROMPT.md`
+- README/docs index
+- definition of done
+
+### New priority
+
+1. validate core
+2. benchmark regression
+3. protocol v1
+4. resident runtime
+5. local machine API
+6. batch/concurrency
+7. MCP adapter
+8. optimization
+9. headless packaging
+
+### Deprioritized
+
+- tray
+- global hotkey
+- drag-selection UI
+- desktop polish
+
+Existing clipboard code remains as a useful adapter/test path.
 
 ---
 
-## 2026-09-24 — Claude handoff foundation
+## 2026-09-24 — Initial Claude handoff foundation
 
-### State
-
-Baseline before handoff docs:
+### Baseline
 
 `6bcf98f7f4593c291ff1c02f0c7b4ccad5ca26a1`
-
-### Added
-
-- Claude-specific root instructions
-- detailed project handoff
-- autonomous execution plan
-- definition-of-done checklist
-- worklog convention
 
 ### Existing implementation
 
 - RapidOCR / PP-OCRv5 baseline
 - file OCR
-- in-memory ndarray OCR
+- ndarray OCR
 - benchmark CLI
 - benchmark suite
 - CER
 - sampled RSS
-- clipboard-image OCR prototype
-- Win32 text clipboard output
+- clipboard prototype
 
-### Validation status
+### Note
 
-Recent implementation still requires full real Windows validation.
-
-No benchmark numbers should be treated as established until measured on target hardware.
-
-### Next
-
-Start at Phase A in `docs/EXECUTION_PLAN.md`, fix discovered issues, then continue through the next unblocked tasks.
+The original handoff was desktop-UX oriented and was superseded by the AI-first direction above.

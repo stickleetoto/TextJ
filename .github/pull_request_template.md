@@ -5,7 +5,7 @@
 ## Validation
 
 - [ ] `pytest -q`
-- [ ] relevant CLI smoke test
+- [ ] relevant CLI/API smoke test
 - [ ] docs/status updated if project state changed
 
 Commands/results:
@@ -14,16 +14,29 @@ Commands/results:
 paste commands/results here
 ```
 
+## Protocol / API impact
+
+- [ ] no machine-facing schema change
+- [ ] or schema/protocol change is documented and versioned
+- [ ] error-code behavior is covered by tests when changed
+- [ ] stdout protocol output remains machine-parseable
+
+Notes:
+
+<!-- Describe request/response changes, compatibility, limits, or N/A. -->
+
 ## Performance impact
 
 <!-- Required for performance-sensitive changes. Otherwise write N/A. -->
 
-Hardware/provider:
+Environment:
 
 ```text
 CPU:
 GPU:
-ONNX Runtime provider:
+provider:
+transport:
+input:
 ```
 
 Before:
@@ -44,19 +57,21 @@ CER:
 RSS:
 ```
 
-- [ ] no performance claim is based only on an unrepresentative single run
+- [ ] no speed claim is based on a single lucky run
+- [ ] total request latency was considered, not only model inference
 - [ ] accuracy impact was checked when OCR behavior changed
 
-## Windows / UX checks
+## Runtime / load checks
 
 When relevant:
 
-- [ ] clipboard contention/failure path considered
-- [ ] DPI scaling considered
-- [ ] multi-monitor coordinates considered
-- [ ] temporary image files avoided
-- [ ] resources/hotkeys/handles are cleaned up
+- [ ] backend is not reconstructed per request
+- [ ] queue is bounded
+- [ ] BUSY/timeout behavior is deterministic
+- [ ] malformed requests are bounded
+- [ ] daemon/API is local-only by default
+- [ ] shutdown/cleanup is handled
 
 ## Known limitations
 
-<!-- Explicitly record anything still incomplete or requiring manual validation. -->
+<!-- Explicitly record manual-validation needs or remaining blockers. -->

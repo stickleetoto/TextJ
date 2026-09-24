@@ -2,233 +2,251 @@
 
 ## 1. Primary metric
 
-TextJ optimizes **end-to-end warm latency**.
+TextJ optimizes **machine-facing request-to-response latency**.
 
-For region capture:
+For a warm local runtime:
 
 ```text
-mouse release
--> image available
--> OCR complete
--> clipboard updated
+request accepted
+-> input validated/acquired
+-> image decoded/normalized
+-> OCR
+-> postprocess
+-> result serialized
+-> response ready
 ```
 
-The measurement ends only when the extracted text is usable.
+The measurement ends when the AI/tool caller can consume the structured result.
+
+Do not optimize only model inference while protocol, decode, queue, or serialization dominate total latency.
 
 ---
 
-## 2. Target classes
+## 2. Latency classes
 
 These are engineering targets, not guarantees.
 
-### Small region
+### Small crop
 
-Example:
+Examples:
 
-- button labels
-- terminal error line
-- short chat message
-- small paragraph
+- one UI label group
+- one error message
+- short terminal area
+- a few text lines
 
 Target:
 
-- **stretch:** <= 150 ms
-- **v1 target:** <= 250 ms warm
+- v1: <= 250 ms warm request-to-response
+- stretch: <= 150 ms
 
-### Ordinary screenshot region
+### Ordinary screenshot/crop
 
-Example:
+Examples:
 
-- several lines of UI text
-- medium chat area
-- code snippet
+- chat region
+- code excerpt
+- UI panel
 - article paragraph
 
 Target:
 
-- **stretch:** <= 300 ms
-- **v1 target:** <= 500 ms warm
+- v1: <= 500 ms warm
+- stretch: <= 300 ms
 
-### Full document-like image
-
-Example:
-
-- 1080p screenshot with many text regions
-- photographed page under reasonable conditions
+### Dense document-like image
 
 Target:
 
-- **v1 target:** <= 1.0 s warm on reference hardware when the selected backend permits it
+- <= 1 second warm where the selected backend permits it
 
-These targets must be revised using real measurements.
+Real targets should be revised after measured baselines exist.
 
 ---
 
-## 3. Cold vs warm benchmarks
+## 3. Cold vs warm
 
-Always report both.
+Report separately.
 
 ### Cold
 
-Includes:
+May include:
 
-- process start,
-- imports,
-- model initialization,
-- inference-session creation,
-- first-run warm-up.
+- process start
+- imports
+- model acquisition
+- model load
+- session creation
+- first inference
 
 ### Warm
 
 Assumes:
 
-- process alive,
-- model loaded,
-- runtime initialized.
+- service alive
+- backend loaded
+- runtime ready
 
-Desktop UX is judged mainly by warm latency.
+AI integration quality is judged primarily by warm latency.
 
 ---
 
-## 4. Stage timing
+## 4. Daemon timing
 
-Every benchmark record should include:
+Once runtime/transport exists, expose stage timing where practical:
 
 | Stage | Meaning |
 | --- | --- |
-| input | file decode, clipboard read, or screen capture |
-| normalize | image format conversion and basic preparation |
+| queue | wait before execution |
+| input | path read / bytes decode / buffer acquisition |
+| normalize | image representation conversion |
 | detect | text detection |
-| map/crop | coordinate mapping and region extraction |
 | recognize | text recognition |
-| postprocess | ordering, joining, cleanup |
-| output | clipboard/stdout/file |
-| total | end-to-end latency |
+| postprocess | ordering/cleanup |
+| serialize | response construction/JSON encoding |
+| total | request-to-response latency |
+
+Transport round-trip can be measured separately by clients.
 
 ---
 
 ## 5. Percentiles
 
-Do not optimize around one lucky run.
+At minimum:
 
-At minimum report:
-
-- median / p50
+- p50
 - p95
-- max during benchmark run
+- max
 
-p95 is especially important for perceived responsiveness.
+For stress tests, also consider p99.
 
-A tool that usually takes 150 ms but randomly takes 2 seconds is not fast in practice.
-
----
-
-## 6. Benchmark dataset
-
-The initial benchmark pack should contain at least:
-
-### UI text
-
-- Windows settings
-- browser UI
-- application dialogs
-
-### Korean
-
-- Korean paragraphs
-- Korean UI
-- mixed Hangul + numbers
-
-### English
-
-- documentation
-- ordinary paragraphs
-- menus
-
-### Mixed technical
-
-- Korean explanation with English library names
-- code screenshots
-- terminal output
-- URLs and paths
-
-### Hard cases
-
-- low contrast
-- dark mode
-- tiny text
-- scaled screenshots
-- colored backgrounds
-- compressed images
+p95 matters more than a single lucky run.
 
 ---
 
-## 7. Accuracy metrics
+## 6. Throughput
 
-Latency alone is insufficient.
+For agent workloads, also record:
+
+- requests/second
+- images/second for batch
+- queue depth
+- BUSY rejects
+- timeout count
+
+Do not improve throughput by making interactive p95 latency unusable.
+
+---
+
+## 7. Accuracy
 
 Recommended metrics:
 
-- CER: Character Error Rate
-- exact-line match rate
-- normalized text match rate
-- text detection recall on selected benchmark images
+- CER
+- exact line match
+- normalized text match
+- detection quality where annotated boxes exist
 
-For practical screen OCR, manually curated expected text files are acceptable during early development.
+Technical-text fixtures should include:
 
----
-
-## 8. Reference benchmark protocol
-
-For each backend/configuration:
-
-1. restart for cold measurement,
-2. record cold first-run latency,
-3. execute warm-up,
-4. run each sample multiple times,
-5. record stage timings,
-6. report p50 and p95,
-7. record peak/RSS memory,
-8. save configuration and runtime provider.
-
-A result without configuration metadata should not be used for comparisons.
+- URLs
+- paths
+- filenames
+- code
+- terminal output
+- punctuation
 
 ---
 
-## 9. Performance budget
+## 8. Resource metrics
 
-Example budget for a 250 ms small-region target:
+Track:
 
-```text
-capture/input       15 ms
-normalize            5 ms
-detect               60 ms
-crop/map             5 ms
-recognize           150 ms
-postprocess           5 ms
-clipboard             2 ms
-budget reserve        8 ms
--------------------------
-total               250 ms
-```
+- idle RSS
+- sampled/true peak RSS where available
+- model memory
+- GPU VRAM if applicable
+- CPU utilization
+- model/package size
 
-This is only an initial budget.
-
-The real budget will be rewritten after the first benchmark.
+For resident service mode, idle RSS is important because the process stays alive.
 
 ---
 
-## 10. Optimization order
+## 9. Protocol overhead
 
-Optimize in this order unless profiling proves otherwise:
+Benchmark:
 
-1. eliminate repeated model loading,
-2. reduce unnecessary image resolution,
-3. reduce image copies/conversions,
-4. batch recognition intelligently,
-5. tune detector input size,
-6. tune runtime provider/threading,
-7. add confidence-based second pass,
-8. only then consider lower-level rewrites.
+- raw Python API call
+- JSON serialization
+- bytes decode
+- local IPC round-trip
+- MCP adapter overhead
 
-Do not rewrite the application in a lower-level language before profiling identifies Python/runtime overhead as a significant part of total latency.
+This shows whether OCR or tool plumbing is the bottleneck.
+
+---
+
+## 10. Concurrency benchmark
+
+Test defined request patterns:
+
+### Sequential
+
+One request at a time.
+
+### Small burst
+
+A few concurrent clients.
+
+### Queue saturation
+
+More requests than the configured queue allows.
+
+Expected behavior must be bounded:
+
+- queued
+- BUSY
+- timeout
+
+Never allow uncontrolled memory growth.
+
+---
+
+## 11. Benchmark dataset
+
+Include:
+
+- KO
+- EN
+- MIX
+- CODE
+- TERM
+- UI
+- DARK
+- TINY
+- HARD
+
+Also classify input size:
+
+- S
+- M
+- L
+- XL
+
+---
+
+## 12. Optimization order
+
+Unless profiling says otherwise:
+
+1. eliminate per-request model construction
+2. establish stable request/result protocol
+3. remove unnecessary encode/decode/copies
+4. bound detector resolution
+5. tune backend/runtime
+6. batch useful work
+7. tune providers/quantization
+8. consider lower-level rewrites only after evidence
+
+Do not rewrite TextJ in another language solely because it sounds faster.

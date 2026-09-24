@@ -1,36 +1,66 @@
 # Claude Kickoff Prompt
 
-This file is optional convenience text for starting a fresh Claude development session.
-
-Copy the prompt below if the environment does not automatically load `CLAUDE.md`.
+Use this when starting a fresh Claude Code development session.
 
 ---
 
-You are taking over development of the TextJ repository.
+You are taking over development of TextJ.
 
-Read `CLAUDE.md`, then read:
+Important direction: **TextJ is an AI-facing local OCR tool/service, not primarily a human desktop OCR application.**
 
-- `docs/HANDOFF_CLAUDE.md`
-- `docs/STATUS.md`
-- `docs/EXECUTION_PLAN.md`
-- `docs/ROADMAP.md`
-- `docs/ARCHITECTURE.md`
-- `docs/PERFORMANCE.md`
+Read these files first:
 
-Then continue implementation autonomously.
+1. `CLAUDE.md`
+2. `docs/HANDOFF_CLAUDE.md`
+3. `docs/STATUS.md`
+4. `docs/PRODUCT.md`
+5. `docs/AI_TOOL_PROTOCOL.md`
+6. `docs/EXECUTION_PLAN.md`
+7. `docs/ROADMAP.md`
+8. `docs/ARCHITECTURE.md`
+9. `docs/PERFORMANCE.md`
 
-Do not only produce a plan. Inspect the repository, run available tests, fix problems, implement the next highest-value unblocked items, test them, update `docs/STATUS.md` and `docs/DEV_WORKLOG.md`, and continue until reaching a meaningful checkpoint or hard blocker.
+Then work autonomously.
 
-The product north star is:
+Do not only produce a plan.
+
+Start by validating the existing repository and tests. Fix any breakage you find. Then continue through the highest-value unblocked items in `docs/EXECUTION_PLAN.md`.
+
+The north star is:
 
 ```text
-global hotkey
--> select screen region
--> release
--> local OCR
--> text immediately in clipboard
+AI agent / automation
+-> sends image or screenshot
+-> long-lived local TextJ runtime
+-> structured OCR result with text, confidence, boxes, timings and stable errors
 ```
 
-Prioritize real end-to-end latency, local processing, Korean/English mixed text, a warm resident runtime, direct in-memory capture, reproducible benchmarks, and reliability.
+Prioritize:
 
-Do not fabricate benchmark results. Do not rewrite the project without evidence. Do not start custom OCR model research before the v1 product path is working and measured.
+- stable machine-facing protocol
+- resident warm runtime
+- local IPC/API
+- batch OCR
+- bounded concurrency/backpressure
+- deterministic error codes
+- MCP adapter
+- reproducible p50/p95/CER benchmarks
+- direct in-memory paths
+- Korean + English
+- headless reliability
+
+Do not prioritize:
+
+- tray UI
+- global hotkeys
+- drag-selection UI
+- desktop polish
+- custom OCR foundation-model research
+
+Human CLI and clipboard code are secondary adapters/debugging utilities.
+
+Do not invent benchmark numbers. Use fake backends for protocol/runtime tests when real OCR/model execution is unavailable.
+
+After meaningful work, update `docs/STATUS.md`, `docs/DEV_WORKLOG.md`, and task state in `docs/EXECUTION_PLAN.md`.
+
+Continue implementation until a meaningful checkpoint or hard blocker.

@@ -2,273 +2,164 @@
 
 Last prepared: 2026-09-24
 
-## Mission
+## Critical direction correction
 
-TextJ should become a **very fast local Windows OCR utility**.
+TextJ is **not primarily a human-facing OCR app**.
 
-The intended final interaction is:
+Previous documents emphasized:
 
 ```text
-global hotkey
--> drag a rectangle over visible text
--> release mouse
--> OCR runs locally
--> recognized text is placed in clipboard
+hotkey -> drag -> OCR -> clipboard
 ```
 
-The interaction should feel closer to a native OS shortcut than opening an OCR application.
+That is no longer the main product direction.
+
+The correct north star is:
+
+```text
+AI agent / worker
+-> sends image or screenshot
+-> warm local TextJ runtime
+-> receives structured OCR result
+```
+
+TextJ should behave like a fast local infrastructure primitive that other AI systems can call.
+
+Human CLI/clipboard functions are retained as debugging/adapters, not the center of the architecture.
 
 ---
 
-## Repository state at handoff
+## Current implementation
 
-Baseline commit before this handoff:
+Baseline before this direction rewrite:
 
-`6bcf98f7f4593c291ff1c02f0c7b4ccad5ca26a1`
+`3f5352d5561cd7458528e1780ce87e12e88fce95`
 
-Implemented before handoff:
-
-### OCR core
+Already implemented:
 
 - Python package
 - backend abstraction
-- RapidOCR adapter
-- PP-OCRv5 mobile detector
-- PP-OCRv5 Korean mobile recognizer
-- ONNX Runtime CPU baseline
+- RapidOCR
+- PP-OCRv5 mobile baseline
+- Korean recognition
+- ONNX Runtime CPU
 - file input
-- NumPy in-memory input
-- OCR result model
-- text, scores and boxes
+- ndarray input
+- text / score / boxes
 - JSON output
-- internal timing export where available
-
-### Benchmarking
-
-- `textj-bench`
-- warmups + repeated runs
-- min / mean / p50 / p95 / max
+- benchmark runner
+- p50/p95
+- CER
 - sampled RSS
-- optional ground-truth CER
-- JSON result output
-- system/runtime metadata
-- benchmark manifest format
-- `textj-bench-suite`
+- benchmark suite
+- clipboard image prototype
+- Win32 clipboard output
 
-### Clipboard prototype
-
-- read clipboard image using Pillow
-- convert image directly to contiguous BGR ndarray
-- OCR without a temporary image file
-- write recognized text through Win32 `CF_UNICODETEXT`
-- `textj-clipboard`
-- `--no-copy`, `--json`, `--timing`
+The clipboard path is no longer a product priority, but useful code should not be deleted just because the priority changed.
 
 ---
 
-## Important caveat
+## First job
 
-The code has not yet been field-validated on the target Windows machine after the most recent changes.
-
-Do **not** assume that all current code paths are bug-free just because they are present.
-
-The first job is to run tests and inspect failures.
-
----
-
-## First commands
-
-From a fresh clone/update:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install -U pip
-pip install -e ".[dev]"
-pytest -q
-```
-
-Then inspect commands:
-
-```powershell
-textj --help
-textj-bench --help
-textj-bench-suite --help
-textj-clipboard --help
-```
-
-With a real screenshot:
-
-```powershell
-textj screenshot.png --timing
-textj-bench screenshot.png --runs 20 --warmups 2
-```
-
-With an image copied to the Windows clipboard:
-
-```powershell
-textj-clipboard --timing
-```
+1. read `CLAUDE.md`
+2. run tests
+3. inspect current code for breakage
+4. update any remaining desktop-centric assumptions encountered
+5. begin `docs/EXECUTION_PLAN.md` from Phase A
+6. move quickly toward Protocol v1 and Resident Runtime
 
 ---
 
-## Likely first issues to inspect
+## New priority
 
-### 1. RapidOCR ndarray path
-
-Confirm that the current RapidOCR version accepts TextJ's BGR ndarray path exactly as expected.
-
-Do not add disk fallback unless necessary.
-
-### 2. Clipboard ownership and locking
-
-Win32 clipboard operations can fail temporarily if another process has it open.
-
-The current implementation may need bounded retry/backoff.
-
-Never create an infinite retry.
-
-### 3. CLI model construction cost
-
-Every current CLI command creates a new OCR backend.
-
-This is expected for now but is unacceptable for the final UX.
-
-The resident runtime is the highest-value architectural next step.
-
-### 4. Benchmark interpretation
-
-Current sampled RSS is not a true continuously measured peak.
-
-Label it accurately unless a real peak sampler is added.
-
-### 5. OCR line ordering
-
-Backend output ordering may not always match visual reading order.
-
-Do not attempt elaborate layout analysis before collecting failure examples.
-
----
-
-## Architectural direction
-
-Target architecture:
+Highest-value upcoming work:
 
 ```text
-                   +----------------------+
-global hotkey ---->| resident TextJ host  |
-                   |                      |
-region selector -->| capture adapter      |
-                   |        |             |
-                   |        v             |
-clipboard image -->| in-memory image      |
-                   |        |             |
-                   |        v             |
-                   | warm OCR pipeline    |
-                   |        |             |
-                   |        v             |
-                   | postprocess          |
-                   |        |             |
-                   |        v             |
-                   | Win32 clipboard      |
-                   +----------------------+
-```
-
-Do not launch Python + model initialization for every OCR action.
-
----
-
-## Performance targets
-
-These are targets, not claimed achievements.
-
-### Small region
-
-- v1 target: <= 250 ms warm
-- stretch: <= 150 ms
-
-### Ordinary screen region
-
-- v1 target: <= 500 ms warm
-- stretch: <= 300 ms
-
-### Dense document-like image
-
-- target: <= 1 second warm when the selected backend permits it
-
-p95 matters more than one lucky run.
-
----
-
-## Accuracy policy
-
-The default fast path must not chase maximum benchmark accuracy at any cost.
-
-Preferred model:
-
-```text
-fast path
-   |
-   +-- confident -> output
-   |
-   +-- low confidence -> targeted accurate retry
-```
-
-Keep code/terminal text preservation in mind.
-
----
-
-## Development strategy
-
-### Build product infrastructure before model research
-
-The preferred order is:
-
-```text
-working OCR
--> reproducible benchmark
--> resident runtime
--> capture UX
+stable OCR core
+-> benchmark regression
+-> protocol v1
+-> warm resident runtime
+-> local machine API
+-> batch/concurrency
+-> MCP adapter
 -> measured optimization
--> quality regression suite
--> packaging
--> only then custom-model research
+-> headless packaging
 ```
 
-### Profile before rewriting
+Do not spend primary development time on:
 
-A Rust/C++ rewrite is allowed later if profiling shows Python orchestration is a real bottleneck.
-
-Do not rewrite preemptively.
-
----
-
-## Relevant documents
-
-- `docs/STATUS.md` — current factual state
-- `docs/ROADMAP.md` — version roadmap
-- `docs/EXECUTION_PLAN.md` — active task queue
-- `docs/ARCHITECTURE.md` — module boundaries
-- `docs/PERFORMANCE.md` — measurement policy
-- `docs/BENCHMARK_MATRIX.md` — benchmark dimensions
-- `docs/OPTIMIZATION.md` — optimization ideas
-- `docs/WINDOWS_RUNTIME.md` — Windows design
-- `docs/CLIPBOARD.md` — clipboard path
-- `docs/TECH_RADAR.md` — adopted/trial technologies
-- `docs/DEV_WORKLOG.md` — chronological development log
+- global hotkeys
+- tray UI
+- region selection
+- desktop UX
 
 ---
 
-## Desired agent behavior
+## AI-facing contract
+
+Read:
+
+`docs/AI_TOOL_PROTOCOL.md`
+
+Public behavior should become stable and versioned.
+
+AI callers need:
+
+- request IDs
+- protocol version
+- structured results
+- stable error codes
+- limits
+- timeouts
+- batch semantics
+- concurrency semantics
+
+Do not make callers parse human-formatted console messages.
+
+---
+
+## Runtime architecture
+
+Target:
+
+```text
+            +-------------------+
+AI client ->| local transport   |
+            +---------+---------+
+                      |
+                      v
+            +-------------------+
+            | TextJ Runtime     |
+            | warm OCR backend  |
+            | bounded queue     |
+            | timeout policy    |
+            +---------+---------+
+                      |
+                      v
+                 OCR pipeline
+                      |
+                      v
+             structured response
+```
+
+Adapters such as MCP, stdio, Python API, or clipboard should all reuse the same runtime.
+
+---
+
+## Development behavior
 
 Be implementation-heavy.
 
-If the current milestone can be moved forward safely, move it forward instead of only suggesting it.
+Do not stop after making a roadmap when code can be written.
 
-When finishing one task:
+After each meaningful batch:
 
-1. test it,
-2. update status/worklog,
-3. start the next unblocked task.
+- test
+- benchmark when applicable
+- update `docs/STATUS.md`
+- update `docs/DEV_WORKLOG.md`
+- continue to the next unblocked task
 
-Stop only at a meaningful checkpoint, a hard blocker, or when further work would require unavailable hardware/user action.
+If real OCR/model validation is blocked, work on protocol/runtime logic using fake backends.
+
+Never fabricate benchmark results.

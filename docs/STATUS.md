@@ -1,137 +1,94 @@
 # Development Status
 
-Last updated: 2026-09-23
+Last updated: 2026-09-24
+
+## Product direction
+
+**TextJ is an AI-facing local OCR tool/service.**
+
+It is not primarily a human desktop OCR application.
+
+Primary target:
+
+```text
+AI agent
+-> image/screenshot request
+-> local warm OCR
+-> structured response
+```
+
+Human CLI and clipboard paths are secondary adapters/debugging tools.
 
 ## Current milestone
 
-**v0.1 OCR Core implemented; v0.2 Benchmark Foundation in progress**
-
-The code path for local image OCR is present. Real Windows screenshot validation is still required before v0.1 is considered field-validated.
+**v0.1 OCR Core implemented; v0.2 Benchmark Foundation in progress; protocol/runtime redesign next.**
 
 ## Implemented
 
 ### OCR core
 
-- Python package layout
-- `textj` console entry point
+- Python package
 - backend abstraction
 - RapidOCR backend
 - PP-OCRv5 mobile configuration
-- Korean recognition model selection
+- Korean recognition
 - ONNX Runtime CPU baseline
-- backend-independent `OCRLine` / `OCRResult`
-- plain-text CLI output
-- JSON output
-- confidence threshold option
-- end-to-end timing
-- RapidOCR internal detector/classifier/recognizer timing export when available
-- backend-independent model and pipeline tests
-
-### In-memory and clipboard path
-
-- OCRPipeline accepts NumPy image arrays
-- RapidOCR backend accepts in-memory arrays directly
-- Pillow clipboard image acquisition
-- RGB -> contiguous BGR conversion for RapidOCR
-- no temporary image file on clipboard path
-- native Win32 CF_UNICODETEXT output
-- `textj-clipboard` command
-- `--no-copy`, JSON and timing modes
-- array/clipboard conversion tests
+- file input
+- ndarray input
+- text / confidence / boxes
+- JSON-capable result model
+- internal stage timing where available
 
 ### Benchmark foundation
 
-- `textj-bench` single-image benchmark
-- warm-up runs separated from measured runs
-- min / mean / p50 / p95 / max latency
-- sampled process RSS memory
-- UTF-8 ground-truth comparison
-- character error rate (CER)
-- result JSON persistence
+- single-image benchmark
+- warmups
+- min / mean / p50 / p95 / max
+- sampled RSS
+- CER
+- JSON persistence
 - system/runtime metadata
-- ONNX Runtime provider metadata
-- benchmark manifest format
-- `textj-bench-suite` multi-image regression runner
-- per-case latency and CER
-- aggregate mean p50 / p95 / CER
-- benchmark utility tests
-- `benchmarks/` fixture layout documentation
+- benchmark manifest
+- benchmark suite
 
-### Development handoff
+### Existing adapters
 
-The repository now includes a self-contained autonomous development handoff:
+- CLI
+- clipboard image input
+- Win32 clipboard text output
 
-- root `CLAUDE.md`
+Clipboard code is now considered an optional adapter, not the primary product path.
+
+### Agent handoff
+
+- `CLAUDE.md`
 - `docs/HANDOFF_CLAUDE.md`
 - `docs/EXECUTION_PLAN.md`
 - `docs/DEFINITION_OF_DONE.md`
 - `docs/DEV_WORKLOG.md`
-- `docs/CLAUDE_KICKOFF_PROMPT.md`
-- `CONTRIBUTING.md`
-- pull request validation template
-
-These documents define product constraints, validation rules, autonomous task order, benchmark expectations, and cross-session logging.
-
-## Commands
-
-OCR:
-
-```bash
-textj image.png --timing
-```
-
-Single-image benchmark:
-
-```bash
-textj-bench image.png --runs 20 --warmups 2
-```
-
-Accuracy benchmark:
-
-```bash
-textj-bench image.png --expected expected.txt --output benchmarks/results/image.json
-```
-
-Regression suite:
-
-```bash
-textj-bench-suite benchmarks/manifest.json \
-  --runs 10 \
-  --warmups 1 \
-  --output benchmarks/results/baseline.json
-```
-
-## Remaining validation
-
-- install on target Windows machine
-- validate RapidOCR model acquisition/cache behavior
-- run Korean screenshot baseline
-- run English screenshot baseline
-- run Korean/English mixed screenshot baseline
-- record cold process/model startup separately
-- collect real p50/p95 values
-- build the first committed synthetic/safe fixture set
-- verify line ordering failures
-- decide whether orientation classification stays disabled by default
+- `docs/AI_TOOL_PROTOCOL.md`
 
 ## Next engineering work
 
-After baseline numbers exist:
-
-1. detector input-size sweep
-2. fast-path image-size policy
-3. box filtering/merge experiments
-4. recognizer batching experiments
-5. optimize the new clipboard path under a resident runtime
-6. Windows screen-region capture
+1. clean test/install validation
+2. benchmark regression comparator
+3. protocol v1 request/response/error models
+4. resident TextJRuntime
+5. local machine-facing transport
+6. batch requests
+7. bounded concurrency/backpressure
+8. MCP adapter
+9. measured OCR optimization
+10. headless packaging
 
 ## Known limitations
 
-- clipboard OCR currently starts a fresh process/model each invocation
-- no screen-region capture yet
-- no resident process yet
-- each CLI invocation is a new Python process
-- first invocation can include model acquisition/loading cost
-- line ordering currently follows backend output
-- orientation classifier is intentionally disabled in the fast baseline
-- RSS metric is sampled after runs, not a continuous true peak-memory profiler
+- no protocol v1 implementation yet
+- no long-lived runtime yet
+- CLI constructs backend per invocation
+- no local daemon yet
+- no MCP adapter yet
+- no batch public API yet
+- no defined queue/backpressure behavior yet
+- no stable public error-code layer yet
+- real Windows/model validation remains incomplete

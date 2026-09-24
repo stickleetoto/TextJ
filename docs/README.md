@@ -1,103 +1,59 @@
 # TextJ Documentation
 
-This directory defines the technical direction of TextJ.
+TextJ is an **AI-facing local OCR tool/service**.
 
-## Core idea
+Its primary job is to accept image input from an AI agent or automated pipeline and return structured OCR output quickly and predictably.
 
-TextJ is not initially an OCR research project.
-
-The first objective is to build an **extremely fast local OCR utility** using replaceable OCR backends and an aggressively optimized end-to-end pipeline.
-
-The main metric is:
-
-```text
-user action -> usable text in clipboard
-```
-
-not only:
-
-```text
-model inference time
-```
-
-## Documents
-
-### Product and roadmap
+## Start here
 
 | Document | Purpose |
 | --- | --- |
-| [PRODUCT.md](PRODUCT.md) | Product scope, principles, use cases, non-goals |
-| [ROADMAP.md](ROADMAP.md) | Development plan from v0.1 to v1.0 |
+| [PRODUCT.md](PRODUCT.md) | Product definition and AI-first scope |
+| [STATUS.md](STATUS.md) | Current factual implementation state |
+| [ROADMAP.md](ROADMAP.md) | Version milestones |
+| [EXECUTION_PLAN.md](EXECUTION_PLAN.md) | Active autonomous development queue |
+| [AI_TOOL_PROTOCOL.md](AI_TOOL_PROTOCOL.md) | Draft machine-facing protocol |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Runtime/service architecture |
+| [HANDOFF_CLAUDE.md](HANDOFF_CLAUDE.md) | Claude development handoff |
 
-### Architecture and implementation
-
-| Document | Purpose |
-| --- | --- |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | Runtime architecture and module boundaries |
-| [TECH_STACK.md](TECH_STACK.md) | Candidate languages, runtimes, APIs, packaging and first implementation stack |
-| [WINDOWS_RUNTIME.md](WINDOWS_RUNTIME.md) | Hotkey, capture, clipboard, DPI, resident process and Windows-specific design |
-| [CLIPBOARD.md](CLIPBOARD.md) | Current in-memory clipboard-image OCR implementation and limitations |
-| [OCR_ENGINE.md](OCR_ENGINE.md) | OCR backend abstraction and recognition strategy |
-
-### Performance engineering
+## Performance and OCR engineering
 
 | Document | Purpose |
 | --- | --- |
-| [PERFORMANCE.md](PERFORMANCE.md) | Performance goals, p50/p95 rules and latency budget |
-| [OPTIMIZATION.md](OPTIMIZATION.md) | Pixel reduction, batching, warm-up, cache, quantization and copy reduction |
-| [BENCHMARK_MATRIX.md](BENCHMARK_MATRIX.md) | Workload matrix, metrics, JSON results and regression gates |
-| [TECH_RADAR.md](TECH_RADAR.md) | Adopt / Trial / Assess / Hold technology decisions |
+| [PERFORMANCE.md](PERFORMANCE.md) | Request-to-response performance policy |
+| [BENCHMARK_MATRIX.md](BENCHMARK_MATRIX.md) | Workloads and benchmark dimensions |
+| [OCR_ENGINE.md](OCR_ENGINE.md) | OCR backend strategy |
+| [OPTIMIZATION.md](OPTIMIZATION.md) | Optimization ideas and constraints |
+| [TECH_STACK.md](TECH_STACK.md) | Runtime and technology candidates |
+| [TECH_RADAR.md](TECH_RADAR.md) | Adopt / Trial / Assess / Hold |
 
-### Agent handoff
+## Development continuity
 
 | Document | Purpose |
 | --- | --- |
-| [HANDOFF_CLAUDE.md](HANDOFF_CLAUDE.md) | Current implementation state, risks and first validation steps |
-| [EXECUTION_PLAN.md](EXECUTION_PLAN.md) | Autonomous development queue from stabilization through packaging |
-| [DEFINITION_OF_DONE.md](DEFINITION_OF_DONE.md) | Completion checklist for code, tests, performance and Windows work |
-| [DEV_WORKLOG.md](DEV_WORKLOG.md) | Short chronological record for cross-session continuation |
-| [CLAUDE_KICKOFF_PROMPT.md](CLAUDE_KICKOFF_PROMPT.md) | Copy/paste bootstrap prompt for a new Claude session |
+| [DEFINITION_OF_DONE.md](DEFINITION_OF_DONE.md) | Completion criteria |
+| [DEV_WORKLOG.md](DEV_WORKLOG.md) | Cross-session worklog |
+| [CLAUDE_KICKOFF_PROMPT.md](CLAUDE_KICKOFF_PROMPT.md) | Fresh Claude session bootstrap |
 
-## Initial technical baseline
+## Secondary adapters
 
-Current first candidate stack:
+These are useful but not the primary product direction:
+
+| Document | Purpose |
+| --- | --- |
+| [CLIPBOARD.md](CLIPBOARD.md) | Existing clipboard OCR prototype |
+| [WINDOWS_RUNTIME.md](WINDOWS_RUNTIME.md) | Earlier Windows desktop-runtime research |
+
+Clipboard/hotkey/tray/region-selection work should not displace protocol/runtime/API/MCP work unless explicitly requested.
+
+## Core doctrine
 
 ```text
-Windows-first
-  |
-  +-- Python prototype
-  +-- PP-OCRv5 Korean mobile
-  +-- RapidOCR and/or direct ONNX adapter
-  +-- ONNX Runtime CPU baseline
-  +-- NumPy
-  +-- minimal OpenCV
-  +-- native Windows hotkey/capture/clipboard path
+AI caller
+-> stable request
+-> warm local TextJ runtime
+-> OCR
+-> structured result
 ```
 
-The backend is intentionally replaceable.
-
-## Performance doctrine
-
-TextJ measures:
-
-```text
-trigger
-+ capture
-+ conversion
-+ detection
-+ crop
-+ recognition
-+ layout
-+ clipboard
-= total latency
-```
-
-Every performance-sensitive change should report both latency and OCR quality.
-
-## Design rule
-
-Every feature should answer one question:
-
-> Does this make text extraction faster, more reliable, or easier to trigger?
-
-If the answer is no, it is probably not a v1 feature.
+TextJ is a tool, not a conversational model and not primarily a desktop GUI.

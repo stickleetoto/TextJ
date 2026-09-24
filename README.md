@@ -1,176 +1,164 @@
 # TextJ
 
-Ultra-fast local OCR utility for extracting text from images and screenshots.
+**Ultra-fast local OCR for AI agents and automated toolchains.**
 
 TextJ is designed around one rule:
 
-> **Capture -> OCR -> Clipboard should feel instant.**
+> **Give an AI system an image and return structured OCR as quickly and predictably as possible.**
 
-The project focuses on low latency, local processing, Korean/English text, and a minimal workflow rather than a heavy OCR desktop application.
+TextJ is not primarily a desktop OCR app.
 
-## Status
+The main consumers are:
 
-**v0.1 OCR Core implemented, v0.2 benchmark work in progress, clipboard OCR prototype available.**
+- LLM agents
+- computer-use agents
+- automation workers
+- local AI runtimes
+- MCP tools
+- screenshot/UI analysis pipelines
 
-The current build accepts either an image file or an in-memory clipboard image, runs local OCR through a replaceable backend, and can emit plain text, structured JSON, benchmark artifacts, or clipboard text.
-
-## Current stack
+## Target architecture
 
 ```text
-TextJ CLI
+AI Agent
    |
-   v
-OCRPipeline
-   |
-   v
-RapidOCR adapter
-   |
-   +-- PP-OCRv5 mobile detector
-   +-- PP-OCRv5 Korean mobile recognizer
-   |
-   v
-ONNX Runtime CPU
+   +-- Python API
+   +-- JSON stdio
+   +-- local daemon
+   +-- MCP adapter
+          |
+          v
+   TextJ warm runtime
+          |
+          v
+      OCR backend
+          |
+          v
+ structured OCR result
 ```
 
-The backend boundary is intentional: RapidOCR is the first baseline, not a permanent architectural dependency.
+## Current status
+
+**OCR core exists. Benchmark foundation is in progress. AI protocol + resident runtime are next.**
+
+Current implementation includes:
+
+- RapidOCR / PP-OCRv5 baseline
+- Korean/English-capable OCR path
+- file input
+- in-memory ndarray input
+- text / confidence / boxes
+- JSON output
+- latency benchmarks
+- p50/p95
+- CER
+- sampled RSS
+- benchmark suites
+- an older clipboard adapter useful for manual tests
 
 ## Install
 
-Python 3.10+ is required.
-
-```bash
+```powershell
 python -m venv .venv
-
-# Windows PowerShell
 .\.venv\Scripts\Activate.ps1
-
 python -m pip install -U pip
 pip install -e ".[dev]"
 ```
 
-## Use
+## Current debug CLI
 
-```bash
-textj screenshot.png
-```
-
-Show timing:
-
-```bash
-textj screenshot.png --timing
-```
-
-Structured output:
-
-```bash
+```powershell
 textj screenshot.png --json
-```
-
-Warm latency benchmark:
-
-```bash
 textj-bench screenshot.png --runs 20 --warmups 2
+textj-bench-suite benchmarks/manifest.json --runs 10 --warmups 1
 ```
 
-Machine-readable benchmark:
+These commands are development/debug interfaces.
 
-```bash
-textj-bench screenshot.png --runs 20 --warmups 2 --json
+The intended v1 interface is machine-facing and long-lived.
+
+## Planned machine-facing request
+
+Conceptually:
+
+```json
+{
+  "protocol_version": "1",
+  "request_id": "req-1",
+  "operation": "ocr",
+  "input": {
+    "type": "path",
+    "path": "frame.png"
+  },
+  "options": {
+    "language": "korean",
+    "include_boxes": true
+  }
+}
 ```
 
-Measure OCR accuracy against expected text and save the result:
+Response:
 
-```bash
-textj-bench screenshot.png \
-  --expected expected.txt \
-  --runs 20 \
-  --warmups 2 \
-  --output benchmarks/results/sample.json
+```json
+{
+  "protocol_version": "1",
+  "request_id": "req-1",
+  "ok": true,
+  "result": {
+    "text": "recognized text",
+    "lines": [],
+    "backend": "rapidocr-onnx",
+    "timings_ms": {}
+  }
+}
 ```
 
-Run a multi-image regression suite:
-
-```bash
-textj-bench-suite benchmarks/manifest.json \
-  --runs 10 \
-  --warmups 1 \
-  --output benchmarks/results/baseline.json
-```
-
-The benchmark output records p50/p95 latency, sampled RSS memory, OCR confidence, CER when ground truth exists, and system/runtime metadata.
-
-Clipboard image OCR on Windows:
-
-```powershell
-textj-clipboard --timing
-```
-
-This reads the image directly from the clipboard into memory, runs OCR without writing a temporary image file, then replaces the clipboard with the recognized text.
-
-Inspect without replacing the clipboard:
-
-```powershell
-textj-clipboard --no-copy
-```
-
-English recognition model:
-
-```bash
-textj screenshot.png --language en
-```
-
-Korean is the default recognition model.
-
-> The first OCR run may include model download/loading work. TextJ measures warm steady-state performance separately as the resident runtime is introduced.
-
-## v1 target workflow
-
-```text
-global hotkey
-  -> select screen region
-  -> capture
-  -> detect text
-  -> recognize
-  -> clipboard
-```
+See [AI Tool Protocol](docs/AI_TOOL_PROTOCOL.md).
 
 ## Project goals
 
-- Extract text from screenshots and images with minimal delay.
-- Run locally by default.
-- Support Korean + English mixed text.
-- Keep the OCR engine replaceable.
-- Make region capture -> clipboard the primary UX.
-- Measure end-to-end latency, not only model inference time.
+- very low warm request latency
+- local/offline OCR
+- Korean + English mixed text
+- stable structured schemas
+- warm resident model/runtime
+- batch OCR
+- bounded concurrency
+- machine-readable errors
+- backend independence
+- MCP/agent integration
+- reproducible performance/accuracy benchmarks
 
-## Development handoff
+## Not the main goal
 
-For autonomous/agent development:
+These are optional or lower priority:
+
+- tray UI
+- global hotkey
+- drag-select overlay
+- human OCR history
+- desktop polish
+
+## Autonomous development
 
 - [Claude instructions](CLAUDE.md)
 - [Claude handoff](docs/HANDOFF_CLAUDE.md)
 - [Execution plan](docs/EXECUTION_PLAN.md)
+- [AI Tool Protocol](docs/AI_TOOL_PROTOCOL.md)
 - [Definition of done](docs/DEFINITION_OF_DONE.md)
 - [Development worklog](docs/DEV_WORKLOG.md)
-- [Claude kickoff prompt](docs/CLAUDE_KICKOFF_PROMPT.md)
-
-The handoff documents are intended to let a new development session continue from repository state without reconstructing the project from chat history.
 
 ## Documentation
 
 - [Docs index](docs/README.md)
-- [Current development status](docs/STATUS.md)
 - [Product definition](docs/PRODUCT.md)
 - [Architecture](docs/ARCHITECTURE.md)
-- [Technology stack](docs/TECH_STACK.md)
-- [OCR engine strategy](docs/OCR_ENGINE.md)
-- [Optimization strategy](docs/OPTIMIZATION.md)
-- [Windows runtime](docs/WINDOWS_RUNTIME.md)
-- [Clipboard OCR](docs/CLIPBOARD.md)
-- [Performance targets](docs/PERFORMANCE.md)
-- [Benchmark matrix](docs/BENCHMARK_MATRIX.md)
-- [Technology radar](docs/TECH_RADAR.md)
 - [Roadmap](docs/ROADMAP.md)
+- [Performance](docs/PERFORMANCE.md)
+- [Benchmark matrix](docs/BENCHMARK_MATRIX.md)
+- [OCR engine](docs/OCR_ENGINE.md)
+- [Optimization](docs/OPTIMIZATION.md)
+- [Technology radar](docs/TECH_RADAR.md)
 
 ## License
 
